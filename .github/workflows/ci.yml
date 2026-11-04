@@ -1,0 +1,56 @@
+name: CI - agent-rules
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  rules:
+    name: Validate rule catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Validate catalog, references and counts
+        run: python3 agent/scripts/validate_repository.py
+      - name: Check Python syntax
+        run: python3 -m py_compile agent/scripts/validate_repository.py agent/scripts/validate_skills.py agent/tests/test_dokploy.py agent/tests/test_skill_configurator.py agent/tests/test_skill_sync.py agent/scripts/sync_skills.py agent/skills/project-rules-configurator/scripts/configure.py
+      - name: Validate Skills format and references
+        run: python3 agent/scripts/validate_skills.py
+      - name: Check Bash syntax
+        run: bash -n agent/scripts/dokploy_deploy.sh agent/scripts/init.sh agent/tests/test_init.sh
+      - name: Offline deployment regression tests
+        run: python3 -m unittest discover -s agent/tests -p 'test_*.py' -v
+      - name: Offline Skills tests
+        run: python3 -m unittest discover -s agent/tests -p 'test_skill_*.py' -v
+      - name: Offline Bash initialization regression tests
+        run: bash agent/tests/test_init.sh
+      - name: Offline native API auth scripting tests
+        run: node --test agent/tests/test_api_auth.js
+
+  ci-required:
+    name: ci-required
+    if: always()
+    needs: [rules]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Assert all required jobs succeeded
+        env:
+          RULES_RESULT: ${{ needs.rules.result }}
+        run: |
+          test "$RULES_RESULT" = success || {
+            echo "Required rules check did not succeed: $RULES_RESULT"
+            exit 1
+          }

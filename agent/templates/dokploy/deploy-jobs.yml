@@ -1,0 +1,59 @@
+# FRAGMENT — copy into an existing project CI workflow containing a real ci-required job.
+# Add push.tags: ['v*']; add push.branches: [pre-prod] ONLY for dual mode.
+# Remove deploy-pre-prod entirely when production-only is selected.
+# The CI suite must also run on the same push/tag references.
+
+deploy-pre-prod:
+  name: Deploy pre-prod
+  if: github.event_name == 'push' && github.ref == 'refs/heads/pre-prod'
+  needs: ci-required
+  runs-on: ubuntu-latest
+  permissions:
+    contents: read
+  environment: pre-production
+  timeout-minutes: 15
+  concurrency:
+    group: dokploy-preprod-${{ github.repository }}
+    cancel-in-progress: false
+  steps:
+    - name: Checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - name: Deploy and verify Dokploy preprod
+      env:
+        DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+        DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+        EXPECTED_SOURCE_REF: ${{ github.ref }}
+        EXPECTED_COMMIT_SHA: ${{ github.sha }}
+        APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
+      run: bash scripts/dokploy_deploy.sh
+
+deploy-prod:
+  name: Deploy prod
+  if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+  needs: ci-required
+  runs-on: ubuntu-latest
+  permissions:
+    contents: read
+  environment: production
+  timeout-minutes: 15
+  concurrency:
+    group: dokploy-prod-${{ github.repository }}
+    cancel-in-progress: false
+  steps:
+    - name: Check release tag format
+      env:
+        RELEASE_TAG: ${{ github.ref_name }}
+      run: |
+        [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+    - name: Checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - name: Deploy and verify Dokploy production
+      env:
+        DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+        DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+        EXPECTED_SOURCE_REF: ${{ github.ref }}
+        EXPECTED_COMMIT_SHA: ${{ github.sha }}
+        APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
+      run: bash scripts/dokploy_deploy.sh
