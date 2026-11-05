@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { recipes, ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
 import { filterCatalogRecipes, parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
+import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import './dark.css';
@@ -30,9 +31,10 @@ function Icon({ name, size = 20 }: { name: 'search' | 'heart' | 'clock' | 'star'
 }
 
 function RecipeCard({ recipe, saved, onToggle, onOpen }: { recipe: Recipe; saved: boolean; onToggle: (id: number) => void; onOpen: (recipe: Recipe) => void }) {
+  const [imageReady, setImageReady] = useState(false);
   return <article className="recipe-card">
-    <a className="recipe-image-button" href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }} aria-label={`Voir la recette ${recipe.title}`}>
-      <img src={recipe.image} alt={recipe.title} loading="lazy" />
+    <a className={`recipe-image-button ${imageReady ? "image-ready" : ""}`} aria-busy={!imageReady} href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }} aria-label={`Voir la recette ${recipe.title}`}>
+      <img src={recipe.image} alt={recipe.title} loading="lazy" onLoad={() => setImageReady(true)} onError={() => setImageReady(true)}/>
       {recipe.badge && <span className="recipe-badge">{recipe.badge}</span>}
     </a>
     <button className={`favorite ${saved ? 'active' : ''}`} onClick={() => onToggle(recipe.id)} aria-label={saved ? `Retirer ${recipe.title} des favoris` : `Ajouter ${recipe.title} aux favoris`} aria-pressed={saved}><Icon name="heart" size={20}/></button>
@@ -54,6 +56,16 @@ function App() {
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const toastId = useRef(0);
+  const notify = (message: string, type: ToastMessage['type'] = 'success') => {
+    setToast({ id: ++toastId.current, message, type });
+  };
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
   const [demoUser, setDemoUser] = useState<Profile | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
@@ -123,10 +135,12 @@ function App() {
     ingredientQuantities[recipe.id] = ingredients;
     recipePreparation[recipe.id] = { prep, cook, ...metadata };
     setCreatedRecipes(current => [recipe, ...current.filter(item => item.id !== recipe.id)]);
+    notify('Recette de démonstration enregistrée.');
   };
   const deleteCreatedRecipe = (id: number) => {
     setCreatedRecipes(current => current.filter(recipe => recipe.id !== id));
     setFavorites(current => current.filter(value => value !== id));
+    notify('Recette de démonstration supprimée.');
   };
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -142,7 +156,11 @@ function App() {
   const hasCatalogFilters = Boolean(search || category !== 'Toutes les recettes' || difficultyFilter || budgetFilter || maxTimeFilter !== null || sortFilter !== 'relevance');
 
   const visible = (isCatalog || search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
-  const toggleFavorite = (id: number) => setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
+  const toggleFavorite = (id: number) => {
+    const alreadySaved = favorites.includes(id);
+    setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
+    notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
+  };
   const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
   const openFavorites = () => { setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/favorites'); };
   const reset = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
@@ -204,9 +222,10 @@ function App() {
     {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
-    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); }}/>}
+    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); notify('Compte de démonstration activé.', 'info'); }}/>}
     {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode} themePreference={themePreference} onThemeChange={updateThemePreference}/>}
-    {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
+    {isNotFound && <NotFoundPage navigate={navigate}/>}
+    <ToastRegion toast={toast} onDismiss={() => setToast(null)}/>
     <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 
   </>;
