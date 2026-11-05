@@ -15,6 +15,8 @@ type Props = {
   onProfileChange: (profile: Profile) => void;
   onFavoriteToggle: (id: number) => void;
   onDeleteRecipe: (id: number) => void;
+  developerMode: boolean;
+  onDeveloperModeChange: (enabled: boolean) => void;
 };
 
 const links: { page: AccountRoute; label: string; href: string }[] = [
@@ -45,7 +47,7 @@ function EmptyContent({ kind, navigate }: { kind: 'favorites' | 'my-recipes'; na
   </div>;
 }
 
-export function AccountPage({ page, profile, recipes, favorites, myRecipes, navigate, onProfileChange, onFavoriteToggle, onDeleteRecipe }: Props) {
+export function AccountPage({ page, profile, recipes, favorites, myRecipes, navigate, onProfileChange, onFavoriteToggle, onDeleteRecipe, developerMode, onDeveloperModeChange }: Props) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'recent' | 'name' | 'time'>('recent');
   const [firstName, setFirstName] = useState(profile?.firstName ?? '');
@@ -102,7 +104,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
               <div className="account-photo-control"><span className="account-avatar-frame"><InitialAvatar profile={{...profile,avatar:avatar || undefined}} large/></span><div><strong>Photo de profil</strong><p>JPG, PNG ou WebP, 2 Mo maximum.</p><label className="account-upload-label" htmlFor="account-avatar-file">Choisir une photo</label><input id="account-avatar-file" className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto}/>{avatar && <button type="button" className="account-text-button" onClick={() => setAvatar('')}>Supprimer la photo</button>}</div></div>
               {photoError && <p role="alert" className="account-error">{photoError}</p>}
               <div className="account-form-grid"><label>Prénom<input required maxLength={70} autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)}/></label><label>Nom<input required maxLength={70} autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)}/></label><label className="account-field-wide">Adresse e-mail<input type="email" readOnly value={profile.email}/><small>L'email sera modifiable après vérification via l'API.</small></label><label className="account-field-wide">Quelques mots sur toi<textarea maxLength={300} rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="Ce que tu aimes cuisiner..."/></label></div>
-              <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Recevoir les actualités</strong><small>Préférence de démonstration, aucun email envoyé.</small></span><input type="checkbox" checked={newsletter} onChange={event => setNewsletter(event.target.checked)}/></label><label><span><strong>Recettes publiques</strong><small>La visibilité sera prise en compte avec l'API.</small></span><input type="checkbox" checked={publicRecipes} onChange={event => setPublicRecipes(event.target.checked)}/></label></div>
+              <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Mode développeur</strong><small>Affiche les outils d'import/export JSON dans l'éditeur de recettes.</small></span><span className="developer-mode-switch"><input type="checkbox" aria-label="Mode développeur" checked={developerMode} onChange={event => onDeveloperModeChange(event.target.checked)}/><span className="developer-mode-track" aria-hidden="true"/></span></label><label><span><strong>Recevoir les actualités</strong><small>Préférence de démonstration, aucun email envoyé.</small></span><input type="checkbox" checked={newsletter} onChange={event => setNewsletter(event.target.checked)}/></label><label><span><strong>Recettes publiques</strong><small>La visibilité sera prise en compte avec l'API.</small></span><input type="checkbox" checked={publicRecipes} onChange={event => setPublicRecipes(event.target.checked)}/></label></div>
               <div className="account-security"><div><h3>Sécurité du compte</h3><p>Modification du mot de passe et suppression du compte seront disponibles lorsque l'API sera branchée.</p></div><button type="button" disabled title="Disponible après l'intégration de l'API">Modifier mon mot de passe</button></div>
               {notice && <p role="status" className="account-success">{notice}</p>}
               <div className="account-form-actions"><button className="account-primary" type="submit">Enregistrer les modifications</button></div>
