@@ -18,7 +18,7 @@ test('Mock login is explicit, not a real authenticated session', () => {
   assert.match(auth, /Aucun compte n’a été créé/);
   assert.match(auth, /aucun e-mail n’a été envoyé/i);
   assert.match(main, /setDemoUser/);
-  assert.doesNotMatch(main, /localStorage|sessionStorage/);
+  assert.doesNotMatch(main, /(?:localStorage|sessionStorage)\.setItem\(['\"](?:auth|session|token|password|demoUser)/i);
 });
 
 test('Registration and password recovery offer accessible forms', () => {

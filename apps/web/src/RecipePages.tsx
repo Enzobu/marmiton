@@ -1,5 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { clearDraft, readDraft, saveDraft, validateRecipeImage, type RecipeDraft } from './recipe-draft';
+import { type RecipeJson } from './recipe-json';
+import { RecipeJsonModal } from './RecipeJsonModal';
 import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePath, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import './recipe-pages.css';
 
@@ -79,7 +81,7 @@ type DraftIngredient = { id: number; name: string; amount: string; unit: string 
 type DraftStep = { id: number; value: string };
 const demoImage = 'https://images.unsplash.com/photo-1547592180-85f173990554?w=900&q=85';
 
-export function RecipeCreate({ navigate, onCreate, initialRecipe }: { navigate: Navigate; onCreate: (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number, metadata: {rest: number; budget: string; utensils: string[]; servings: number}) => void; initialRecipe?: Recipe }) {
+export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode = false }: { navigate: Navigate; onCreate: (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number, metadata: {rest: number; budget: string; utensils: string[]; servings: number}) => void; initialRecipe?: Recipe; developerMode?: boolean }) {
   const [title, setTitle] = useState(initialRecipe?.title ?? '');
   const [description, setDescription] = useState(initialRecipe?.description ?? '');
   const [category, setCategory] = useState(initialRecipe?.category ?? 'Plats');
@@ -92,6 +94,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe }: { navigate: 
   const [photoError, setPhotoError] = useState('');
   const [savedDraft, setSavedDraft] = useState<RecipeDraft | null>(() => initialRecipe ? null : readDraft());
   const [draftMessage, setDraftMessage] = useState('');
+  const [jsonModalOpen, setJsonModalOpen] = useState(false);
   const [cook, setCook] = useState(recipePreparation[initialRecipe?.id ?? 0]?.cook ?? 30);
   const [servings, setServings] = useState(recipePreparation[initialRecipe?.id ?? 0]?.servings ?? initialRecipe?.servings ?? 4);
   const [image, setImage] = useState(initialRecipe?.image ?? '');
@@ -136,6 +139,32 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe }: { navigate: 
     if (value && !utensils.includes(value) && utensils.length < 20) setUtensils(current => [...current, value]);
     setUtensilInput('');
   };
+  const exportRecipe: RecipeJson = {
+    schemaVersion: 1,
+    title, description,
+    category: category as RecipeJson['category'],
+    difficulty,
+    servings,
+    times: { preparation: prep, cooking: cook, rest },
+    budget: budget as RecipeJson['budget'],
+    ingredients: items.map(item => ({ name: item.name, quantity: item.amount.trim() === '' ? NaN : Number(item.amount), unit: item.unit })),
+    utensils, steps: steps.map(step => step.value),
+    imageUrl: image.startsWith('data:') || !image.trim() ? null : image.trim()
+  };
+  const importRecipe = (document: RecipeJson) => {
+    if (!window.confirm('Importer ce JSON remplacera tous les champs du formulaire actuel. Continuer ?')) return;
+    setTitle(document.title); setDescription(document.description);
+    setCategory(document.category); setDifficulty(document.difficulty);
+    setPrep(document.times.preparation); setCook(document.times.cooking); setRest(document.times.rest);
+    setBudget(document.budget); setServings(document.servings); setUtensils([...document.utensils]);
+    setImage(document.imageUrl ?? '');
+    setItems(document.ingredients.map((item,index) => ({ id: index + 1, name: item.name, amount: String(item.quantity), unit: item.unit })));
+    setSteps(document.steps.map((value,index) => ({ id: 100 + index, value })));
+    setCounter(1000);
+    setSavedDraft(null); setPhotoError(''); setError('');
+    setDraftMessage('Recette importée dans le formulaire. Vérifie-la puis enregistre-la quand tu le souhaites.');
+    setJsonModalOpen(false);
+  };
   const addIngredient = () => { setItems(value => [...value, { id: counter, name: '', amount: '', unit: 'g' }]); setCounter(value => value + 1); };
   const addStep = () => { setSteps(value => [...value, { id: counter, value: '' }]); setCounter(value => value + 1); };
   const updateIngredient = (id: number, field: 'name' | 'amount' | 'unit', value: string) => setItems(current => current.map(item => item.id === id ? { ...item, [field]: value } : item));
@@ -151,7 +180,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe }: { navigate: 
     navigate(recipePath(id));
   };
   return <main className="create-page"><div className="detail-container"><nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => {event.preventDefault();navigate('/');}}>Accueil</a><span>/</span><a href="/recipes" onClick={event => {event.preventDefault();navigate('/recipes');}}>Recettes</a><span>/</span><span aria-current="page">{initialRecipe ? 'Modifier la recette' : 'Nouvelle recette'}</span></nav>
-    <div className="create-heading"><span className="section-kicker">Ton carnet de cuisine</span><h1>{initialRecipe ? 'Modifie ta recette' : 'Partage ta recette'}</h1><p>Une bonne recette mérite d'être gardée. Remplis les informations ci-dessous pour créer ton brouillon.</p></div>
+    <div className="create-heading"><span className="section-kicker">Ton carnet de cuisine</span><div className="create-heading-actions"><h1>{initialRecipe ? 'Modifie ta recette' : 'Partage ta recette'}</h1>{developerMode && <button type="button" className="recipe-json-button" onClick={() => setJsonModalOpen(true)}>{'{ }'} Intégration JSON</button>}</div><p>Une bonne recette mérite d'être gardée. Remplis les informations ci-dessous pour créer ton brouillon.</p></div>
     {savedDraft && <div className="draft-restore-banner"><div><strong>Un brouillon t'attend</strong><p>Tu peux reprendre ta dernière création enregistrée localement.</p></div><button type="button" onClick={restoreDraft}>Reprendre mon brouillon</button><button type="button" onClick={() => { clearDraft(); setSavedDraft(null); }}>Ignorer</button></div>}
     {draftMessage && <p className="draft-message" role="status">{draftMessage}</p>}
     <form onSubmit={submit} className="create-layout"><div className="create-form-main"><section className="create-card"><div className="create-card-title"><span>01</span><div><h2>Les informations essentielles</h2><p>Donne envie de passer à table.</p></div></div><div className="form-grid"><label className="form-field form-full">Nom de la recette *<input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. Gratin de légumes de mamie"/></label><label className="form-field form-full">Description *<textarea required rows={4} maxLength={600} value={description} onChange={event => setDescription(event.target.value)} placeholder="Quelques mots pour présenter ta recette..."/></label><label className="form-field">Catégorie<select value={category} onChange={event => setCategory(event.target.value)}><option>Plats</option><option>Entrées</option><option>Desserts</option><option>Petit-déjeuner</option></select></label><label className="form-field">Difficulté<select value={difficulty} onChange={event => setDifficulty(event.target.value as 'Facile' | 'Moyen')}><option>Facile</option><option>Moyen</option></select></label><label className="form-field form-full">URL de photo (facultatif)<input type="url" value={image.startsWith('data:') ? '' : image} onChange={event => setImage(event.target.value)} placeholder="https://exemple.com/ma-recette.jpg"/></label><label className="form-field form-full">Ou choisir une photo sur ton appareil<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto}/><small>JPG, PNG ou WebP, maximum 2 Mo. Photo conservée en mémoire pour cette démonstration.</small></label>{photoError && <p className="form-error" role="alert">{photoError}</p>}{image && <button type="button" className="add-row-button" onClick={() => setImage('')}>Retirer la photo</button>}</div></section>
@@ -162,5 +191,5 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe }: { navigate: 
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="create-buttons"><a href="/recipes" onClick={event => {event.preventDefault();navigate('/recipes');}}>Annuler</a><button type="submit">{initialRecipe ? 'Enregistrer la recette' : 'Prévisualiser ma recette'} <Glyph name="arrow" size={18}/></button></div>
     </div><aside className="create-sidebar"><div className="create-preview"><img src={image.trim() || demoImage} alt="Aperçu de la recette" onError={event => { event.currentTarget.src = demoImage; }}/><div><span className="card-category">Ma prochaine recette</span><h3>{title.trim() || 'Le titre de ta recette'}</h3><p>{description.trim() || 'Ta description apparaîtra ici...'}</p><span><Glyph name="clock" size={16}/>{formatTime(prep + cook + rest)} · {servings} pers.</span></div></div><div className="draft-disclaimer"><strong>Mode démonstration</strong><p>Les champs de ton brouillon sont enregistrés localement. Les photos choisies sur ton appareil ne survivent pas au rechargement. La publication arrivera avec l'API.</p></div></aside></form>
-  </div></main>;
+  </div>{jsonModalOpen && <RecipeJsonModal recipe={exportRecipe} onImport={importRecipe} onClose={() => setJsonModalOpen(false)}/>}</main>;
 }
