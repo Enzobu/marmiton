@@ -54,6 +54,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Validate root Docker Compose
+        run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
+      - name: Build frontend image
+        run: docker compose --env-file .env.example -f docker-compose.yml build web
 
   ci-required:
     name: ci-required
@@ -75,9 +79,8 @@ jobs:
 
   deploy-prod:
     name: Deploy production (Dokploy)
-    # Activation volontaire : définir CD_ENABLED=true dans les Variables GitHub.
-    # Aucun déploiement depuis PR, dev ou déclenchement manuel.
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CD_ENABLED == 'true' }}
+    # Déploiement uniquement sur push main après CI verte ; jamais depuis dev/PR.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs: ci-required
     runs-on: ubuntu-latest
     permissions:
