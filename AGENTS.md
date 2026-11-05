@@ -44,5 +44,5 @@ La politique approuvée de ce dépôt est dans `.agent/project-policy.yml` (voir
 - `main` = production ; `dev` = intégration ; toute branche de fonctionnalité part de `dev` et ouvre une PR vers `dev`.
 - Le propriétaire autorise à l'avance la fusion des PR de feature **sur `dev` uniquement**, après réussite de tous les contrôles requis, absence de conflit et revue des différences. Cette exception locale précise l'autorisation de merge G19/H18; ne jamais contourner une protection GitHub.
 - Chaque promotion `dev` → `main` exige une PR et une autorisation explicite distincte, même si la CI est verte. Ne jamais committer directement sur `main`.
-- Une fois configurée et activée, la CD production sera déclenchée uniquement sur un merge/push de `main`, jamais sur `dev`. Aucun déploiement réel sans secrets Dokploy, vérification du SHA et contrôles de santé opérationnels.
+- La CD production est déclenchée uniquement sur un push de `main` après CI verte, jamais sur `dev`. La vérification de SHA est explicitement différée au développement de l'API ; ne pas présenter un déploiement comme version vérifiée sans contrôle correspondant.
 - Après merge confirmé vers `dev`, fermer les issues réellement terminées et nettoyer les branches de features intégrées selon G20/H15.
