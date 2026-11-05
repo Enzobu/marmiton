@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { recipes, ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
 import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
+import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
@@ -46,7 +47,7 @@ function App() {
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
-  const [demoUser, setDemoUser] = useState<DemoUser | null>(null);
+  const [demoUser, setDemoUser] = useState<Profile | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [path, setPath] = useState(window.location.pathname);
   const navigate = (next: string) => {
@@ -60,17 +61,24 @@ function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
   const allRecipes = useMemo(() => [...createdRecipes, ...recipes], [createdRecipes]);
-  const detailId = /^\/recettes\/(\d+)$/.exec(path)?.[1];
+  const detailId = /^\/recipes\/(\d+)$/.exec(path)?.[1];
+  const editId = /^\/recipes\/(\d+)\/edit$/.exec(path)?.[1];
+  const editRecipe = editId ? createdRecipes.find(recipe => recipe.id === Number(editId)) : undefined;
+  const accountRoute = ({ '/profile': 'profile', '/my-recipes': 'my-recipes', '/favorites': 'favorites' } as Record<string, AccountRoute>)[path];
   const selectedRecipe = detailId ? allRecipes.find(recipe => recipe.id === Number(detailId)) : undefined;
   const isHome = path === '/';
-  const isCatalog = path === '/recettes';
-  const isCreate = path === '/recettes/nouvelle';
+  const isCatalog = path === '/recipes';
+  const isCreate = path === '/recipes/new';
   const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
-  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage;
+  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe;
   const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number) => {
     ingredientQuantities[recipe.id] = ingredients;
     recipePreparation[recipe.id] = { prep, cook, rest: 0, budget: 'Non renseigné', utensils: [] };
-    setCreatedRecipes(current => [recipe, ...current]);
+    setCreatedRecipes(current => [recipe, ...current.filter(item => item.id !== recipe.id)]);
+  };
+  const deleteCreatedRecipe = (id: number) => {
+    setCreatedRecipes(current => current.filter(recipe => recipe.id !== id));
+    setFavorites(current => current.filter(value => value !== id));
   };
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -82,10 +90,10 @@ function App() {
 
   const visible = (isCatalog || search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
   const toggleFavorite = (id: number) => setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
-  const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
-  const openFavorites = () => { setOnlyFavorites(true); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
+  const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
+  const openFavorites = () => { setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/favorites'); };
   const reset = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
-  const browse = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
+  const browse = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
   const openRecipe = (recipe: Recipe) => navigate(recipePath(recipe.id));
 
   return <>
@@ -94,19 +102,32 @@ function App() {
       <div className="header-inner">
         <button className="logo" onClick={reset} aria-label="Accueil Les Petits Plats"><span className="logo-mark"><Icon name="chef" size={25}/></span><span>les petits<span className="logo-accent">plats.</span></span></button>
         <nav className="desktop-navigation" aria-label="Navigation principale">
-          <button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recettes/nouvelle"); }}>Créer une recette</button>
+          <button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
         </nav>
-        <div className="header-actions"><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap"><button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}><span className="profile-avatar">{(demoUser.firstName.charAt(0) + demoUser.lastName.charAt(0)).toUpperCase()}</span><span>{demoUser.firstName}</span></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><strong>{demoUser.firstName} {demoUser.lastName}</strong><span>{demoUser.email}</span></div><button onClick={() => { setProfileOpen(false); navigate('/recettes/nouvelle'); }}>Créer une recette</button><button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button><button onClick={() => { setDemoUser(null); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button><span className="profile-demo-tag">Compte de démonstration, non persistant</span></div>}</div> : <button className="signin-button" onClick={() => navigate('/connexion')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
+        <div className="header-actions"><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap">
+          <button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
+            <span className="profile-avatar">{demoUser.avatar ? <img src={demoUser.avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (demoUser.firstName.charAt(0) + demoUser.lastName.charAt(0)).toUpperCase()}</span><span>{demoUser.firstName}</span>
+          </button>
+          {profileOpen && <div className="profile-dropdown">
+            <div className="profile-dropdown-head"><strong>{demoUser.firstName} {demoUser.lastName}</strong><span>{demoUser.email}</span></div>
+            <button onClick={() => { setProfileOpen(false); navigate('/profile'); }}>Mon profil</button>
+            <button onClick={() => { setProfileOpen(false); navigate('/my-recipes'); }}>Mes recettes</button>
+            <button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button>
+            <button onClick={() => { setProfileOpen(false); navigate('/recipes/new'); }}>Créer une recette</button>
+            <button onClick={() => { setDemoUser(null); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
+            <span className="profile-demo-tag">Compte de démonstration, non persistant</span>
+          </div>}
+        </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
       </div>
-      {menuOpen && <nav className="mobile-navigation" aria-label="Navigation mobile"><button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recettes/nouvelle"); }}>Créer une recette</button></nav>}
+      {menuOpen && <nav className="mobile-navigation" aria-label="Navigation mobile"><button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button></nav>}
     </header>
     {(isHome || isCatalog) && <main>
       {isHome && <>
       <section className="hero">
         <div className="hero-inner">
           <div className="hero-copy"><span className="eyebrow"><span className="eyebrow-line"/> La cuisine qui rassemble</span><h1>Chaque recette<br/>a sa petite <em>histoire.</em></h1><p>Des idées gourmandes, des recettes testées et surtout beaucoup de plaisir à cuisiner. Qu'est-ce qu'on prépare aujourd'hui ?</p>
-            <form className="hero-search" onSubmit={event => { event.preventDefault(); navigate('/recettes'); }}><Icon name="search" size={23}/><label className="sr-only" htmlFor="recipe-search">Chercher une recette ou un ingrédient</label><input id="recipe-search" value={search} onChange={event => { setSearch(event.target.value); setShowAll(true); }} placeholder="Une recette, un ingrédient..." /><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form>
-            <div className="popular-searches"><strong>À essayer :</strong><button onClick={() => { setSearch('chocolat'); setShowAll(true); navigate('/recettes'); }}>Chocolat</button><button onClick={() => { setSearch('poulet'); setShowAll(true); navigate('/recettes'); }}>Poulet</button><button onClick={() => { setSearch('pâtes'); setShowAll(true); navigate('/recettes'); }}>Pâtes</button></div>
+            <form className="hero-search" onSubmit={event => { event.preventDefault(); navigate('/recipes'); }}><Icon name="search" size={23}/><label className="sr-only" htmlFor="recipe-search">Chercher une recette ou un ingrédient</label><input id="recipe-search" value={search} onChange={event => { setSearch(event.target.value); setShowAll(true); }} placeholder="Une recette, un ingrédient..." /><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form>
+            <div className="popular-searches"><strong>À essayer :</strong><button onClick={() => { setSearch('chocolat'); setShowAll(true); navigate('/recipes'); }}>Chocolat</button><button onClick={() => { setSearch('poulet'); setShowAll(true); navigate('/recipes'); }}>Poulet</button><button onClick={() => { setSearch('pâtes'); setShowAll(true); navigate('/recipes'); }}>Pâtes</button></div>
           </div>
           <div className="hero-visual"><img src="https://images.unsplash.com/photo-1547592180-85f173990554?w=1300&q=90" alt="Plat gourmand à partager" /><div className="hero-stamp"><span>Fait avec</span><Icon name="heart" size={28}/><span>à la maison</span></div></div>
         </div>
@@ -118,11 +139,13 @@ function App() {
         {visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={() => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); }}>Voir toutes les recettes</button></div>}
         {filtered.length > visible.length && <div className="see-more"><button onClick={() => setShowAll(true)}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
       </section>}
-      {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recettes/nouvelle")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
+      {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>}
     {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && <RecipeCreate navigate={navigate} onCreate={addCreatedRecipe}/>}
-    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={user => { setDemoUser(user); setProfileOpen(false); navigate("/"); } }/>}
+    {editRecipe && <RecipeCreate key={editRecipe.id} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); }}/>}
+    {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe}/>}
     {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
     <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 
