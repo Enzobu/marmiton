@@ -29,7 +29,8 @@ test('Account pages provide editable profile and custom photo in demo', () => {
 
 test('Favorites and personal recipe controls have working callbacks', () => {
   assert.match(account, /onFavoriteToggle\(recipe.id\)/);
-  assert.match(account, /onDeleteRecipe\(recipe.id\)/);
+  assert.match(account, /onDeleteRecipe\(pendingDelete.id\)/);
+  assert.match(account, /<ConfirmDialog/);
   assert.match(account, /sort === 'name'/);
   assert.match(account, /EmptyContent/);
   assert.match(app, /setCreatedRecipes\(current => \[recipe, \.\.\.current.filter/);
