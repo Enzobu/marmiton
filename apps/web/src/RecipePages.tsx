@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { clearDraft, readDraft, saveDraft, validateRecipeImage, type RecipeDraft } from './recipe-draft';
 import { type RecipeJson } from './recipe-json';
 import { RecipeJsonModal } from './RecipeJsonModal';
+import { ConfirmDialog } from './UiFeedback';
 import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePath, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import './recipe-pages.css';
 
@@ -95,6 +96,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
   const [savedDraft, setSavedDraft] = useState<RecipeDraft | null>(() => initialRecipe ? null : readDraft());
   const [draftMessage, setDraftMessage] = useState('');
   const [jsonModalOpen, setJsonModalOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<RecipeJson | null>(null);
   const [cook, setCook] = useState(recipePreparation[initialRecipe?.id ?? 0]?.cook ?? 30);
   const [servings, setServings] = useState(recipePreparation[initialRecipe?.id ?? 0]?.servings ?? initialRecipe?.servings ?? 4);
   const [image, setImage] = useState(initialRecipe?.image ?? '');
@@ -151,8 +153,10 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
     utensils, steps: steps.map(step => step.value),
     imageUrl: image.startsWith('data:') || !image.trim() ? null : image.trim()
   };
-  const importRecipe = (document: RecipeJson) => {
-    if (!window.confirm('Importer ce JSON remplacera tous les champs du formulaire actuel. Continuer ?')) return;
+  const importRecipe = (document: RecipeJson) => setPendingImport(document);
+  const applyImportedRecipe = () => {
+    if (!pendingImport) return;
+    const document = pendingImport;
     setTitle(document.title); setDescription(document.description);
     setCategory(document.category); setDifficulty(document.difficulty);
     setPrep(document.times.preparation); setCook(document.times.cooking); setRest(document.times.rest);
@@ -164,6 +168,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
     setSavedDraft(null); setPhotoError(''); setError('');
     setDraftMessage('Recette importée dans le formulaire. Vérifie-la puis enregistre-la quand tu le souhaites.');
     setJsonModalOpen(false);
+    setPendingImport(null);
   };
   const addIngredient = () => { setItems(value => [...value, { id: counter, name: '', amount: '', unit: 'g' }]); setCounter(value => value + 1); };
   const addStep = () => { setSteps(value => [...value, { id: counter, value: '' }]); setCounter(value => value + 1); };
@@ -191,5 +196,6 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="create-buttons"><a href="/recipes" onClick={event => {event.preventDefault();navigate('/recipes');}}>Annuler</a><button type="submit">{initialRecipe ? 'Enregistrer la recette' : 'Prévisualiser ma recette'} <Glyph name="arrow" size={18}/></button></div>
     </div><aside className="create-sidebar"><div className="create-preview"><img src={image.trim() || demoImage} alt="Aperçu de la recette" onError={event => { event.currentTarget.src = demoImage; }}/><div><span className="card-category">Ma prochaine recette</span><h3>{title.trim() || 'Le titre de ta recette'}</h3><p>{description.trim() || 'Ta description apparaîtra ici...'}</p><span><Glyph name="clock" size={16}/>{formatTime(prep + cook + rest)} · {servings} pers.</span></div></div><div className="draft-disclaimer"><strong>Mode démonstration</strong><p>Les champs de ton brouillon sont enregistrés localement. Les photos choisies sur ton appareil ne survivent pas au rechargement. La publication arrivera avec l'API.</p></div></aside></form>
-  </div>{jsonModalOpen && <RecipeJsonModal recipe={exportRecipe} onImport={importRecipe} onClose={() => setJsonModalOpen(false)}/>}</main>;
+  </div>{jsonModalOpen && <RecipeJsonModal recipe={exportRecipe} onImport={importRecipe} onClose={() => setJsonModalOpen(false)}/>}
+  {pendingImport && <ConfirmDialog title="Importer cette recette ?" description="L'import remplacera les champs actuels du formulaire, sans enregistrer automatiquement la recette." confirmLabel="Remplir le formulaire" onConfirm={applyImportedRecipe} onCancel={() => setPendingImport(null)}/>}</main>;
 }
