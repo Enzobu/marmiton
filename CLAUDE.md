@@ -19,3 +19,7 @@ Pour sélectionner l'un des **20 Skills** (workflow ou stack), lire `agent/docs/
 Pour une intervention nécessitant plusieurs Skills, lire `agent/docs/SKILL_ORCHESTRATION.md`. Les Skills disponibles incluent aussi `dependency-upgrade`, `security-audit` et `performance-audit`, distribuables dans `.claude/agent/skills/` via `scripts/sync_skills.py`.
 
 Organisation template : toutes les ressources canoniques sont dans `agent/`; lire `agent/docs/TEMPLATE.md`. Initialisation par `bash agent/scripts/init.sh --profile standard` et installation native dans `.claude/skills/` après `--write`.
+
+## Politique locale Marmiton
+
+Consulter `.agent/project-policy.yml` et `WORKFLOW.md` : feature depuis `dev`, PR vers `dev` avec fusion préautorisée après CI verte; `dev` vers `main` seulement sur accord explicite, et déploiement production uniquement depuis `main` après activation des contrôles Dokploy. Ces choix locaux ne modifient pas les Rules canoniques.
