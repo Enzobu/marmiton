@@ -49,6 +49,14 @@ function App() {
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
   const [demoUser, setDemoUser] = useState<Profile | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [developerMode, setDeveloperMode] = useState(() => {
+    try { return window.localStorage.getItem('petitsplats.developerMode') === 'true'; }
+    catch { return false; }
+  });
+  const toggleDeveloperMode = (enabled: boolean) => {
+    setDeveloperMode(enabled);
+    try { window.localStorage.setItem('petitsplats.developerMode', String(enabled)); } catch { /* Storage unavailable. */ }
+  };
   const [path, setPath] = useState(window.location.pathname);
   const navigate = (next: string) => {
     if (window.location.pathname !== next) window.history.pushState(null, '', next);
@@ -142,10 +150,10 @@ function App() {
       {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>}
     {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
-    {isCreate && <RecipeCreate navigate={navigate} onCreate={addCreatedRecipe}/>}
-    {editRecipe && <RecipeCreate key={editRecipe.id} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); }}/>}
-    {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe}/>}
+    {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
     {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
     <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 
