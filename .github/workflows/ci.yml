@@ -72,3 +72,41 @@ jobs:
             echo "Required rules check did not succeed: $RULES_RESULT"
             exit 1
           }
+
+  deploy-prod:
+    name: Deploy production (Dokploy)
+    # Activation volontaire : définir CD_ENABLED=true dans les Variables GitHub.
+    # Aucun déploiement depuis PR, dev ou déclenchement manuel.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CD_ENABLED == 'true' }}
+    needs: ci-required
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: production
+    timeout-minutes: 20
+    concurrency:
+      group: dokploy-production-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout validated revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Preflight required configuration
+        env:
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
+        run: |
+          test -n "$DOKPLOY_URL" || { echo "::error::Missing DOKPLOY_URL variable"; exit 1; }
+          test -n "$DOKPLOY_API_KEY" || { echo "::error::Missing DOKPLOY_API_KEY secret"; exit 1; }
+          test -n "$DOKPLOY_COMPOSE_ID" || { echo "::error::Missing DOKPLOY_COMPOSE_ID secret"; exit 1; }
+          test -n "$APP_VERSION_URL" || { echo "::error::Missing APP_VERSION_URL variable"; exit 1; }
+      - name: Trigger Dokploy and verify deployed revision
+        env:
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          EXPECTED_SOURCE_REF: ${{ github.ref }}
+          EXPECTED_COMMIT_SHA: ${{ github.sha }}
+          APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
+        run: bash agent/scripts/dokploy_deploy.sh
