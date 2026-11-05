@@ -6,6 +6,8 @@ import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import './dark.css';
+type ThemePreference = 'light' | 'dark' | 'system';
 
 const categories = ['Toutes les recettes', 'Entrées', 'Plats', 'Desserts', 'Petit-déjeuner'];
 const categoryInitials: Record<string, string> = { 'Entrées': 'E', 'Plats': 'P', 'Desserts': 'D', 'Petit-déjeuner': 'PD' };
@@ -54,6 +56,25 @@ function App() {
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
   const [demoUser, setDemoUser] = useState<Profile | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
+    try { const stored = window.localStorage.getItem('petitsplats.theme'); return stored === 'light' || stored === 'dark' ? stored : 'system'; }
+    catch { return 'system'; }
+  });
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const dark = themePreference === 'dark' || (themePreference === 'system' && media.matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#161b18' : '#fffdf9');
+    };
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [themePreference]);
+  const updateThemePreference = (value: ThemePreference) => {
+    setThemePreference(value);
+    try { window.localStorage.setItem('petitsplats.theme', value); } catch { /* Storage can be blocked. */ }
+  };
   const [developerMode, setDeveloperMode] = useState(() => {
     try { return window.localStorage.getItem('petitsplats.developerMode') === 'true'; }
     catch { return false; }
@@ -184,7 +205,7 @@ function App() {
     {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); }}/>}
-    {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
+    {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode} themePreference={themePreference} onThemeChange={updateThemePreference}/>}
     {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
     <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 

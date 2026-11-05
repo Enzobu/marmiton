@@ -1,0 +1,115 @@
+/* Shared three-state appearance selector */
+.account-theme-preference{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 0;border-bottom:1px solid var(--color-line)}.account-theme-preference strong{display:block;font-size:12px}.account-theme-preference small{display:block;color:var(--color-muted);font-size:11px;margin-top:5px}.account-theme-segments{display:inline-flex;align-items:center;padding:4px;gap:3px;border:1px solid var(--color-line);background:var(--color-soft);border-radius:10px;flex-shrink:0}.account-theme-segments button{border:0;border-radius:7px;background:transparent;padding:9px 13px;color:var(--color-muted);font-size:11px;font-weight:800}.account-theme-segments button:hover{color:var(--color-accent)}.account-theme-segments button.is-active{background:var(--color-paper);color:var(--color-accent);box-shadow:0 2px 7px #0002}
+@media(max-width:520px){.account-theme-preference{align-items:flex-start;flex-direction:column}.account-theme-segments{width:100%;display:flex}.account-theme-segments button{flex:1}}
+
+/* Dark theme – surfaces, typography, controls and semantic states */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --color-page:#161b18;
+  --color-paper:#222923;
+  --color-ink:#f3eee5;
+  --color-muted:#b8b8ad;
+  --color-accent:#ffac78;
+  --color-accent-hover:#dc7946;
+  --color-soft:#332b24;
+  --color-hero:#1d251f;
+  --color-line:#3b453d;
+  --color-green:#90b396;
+  --shadow-card:0 12px 36px #0005;
+}
+html[data-theme="dark"] body{background:var(--color-page);color:var(--color-ink)}
+html[data-theme="dark"] :is(input,textarea,select){color:var(--color-ink);accent-color:var(--color-accent)}
+html[data-theme="dark"] :is(input,textarea,select)::placeholder{color:#989e94}
+html[data-theme="dark"] :is(button,a,input,select,textarea):focus-visible{outline-color:var(--color-accent)}
+html[data-theme="dark"] :is(.site-header,.hero-search,.category-tile,.filter-chips button,.recipe-card,.signin-button,.favorite,.hero-stamp,.popular-searches button,.empty-state,.advanced-search-panel,.advanced-search-panel select,.advanced-reset,.soon-tag,.modal-close,.recipe-modal){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] .top-announcement{background:#365642;color:#fff}
+html[data-theme="dark"] :is(.desktop-navigation button,.mobile-navigation button,.category-tile,.popular-searches strong){color:var(--color-ink)}
+html[data-theme="dark"] :is(.hero-copy>p,.popular-searches,.section-heading>p,.filter-caption,.recipe-count,.reviews,.card-meta,.site-footer){color:var(--color-muted)}
+html[data-theme="dark"] .hero-visual:before{background:#514136}
+html[data-theme="dark"] .hero-stamp{color:var(--color-ink);box-shadow:0 10px 35px #0005}
+html[data-theme="dark"] :is(.category-emoji,.recipe-image-button){background:#39372e}
+html[data-theme="dark"] .category-tile{border-color:var(--color-line)}
+html[data-theme="dark"] .category-tile:hover{border-color:var(--color-accent)}
+html[data-theme="dark"] .filter-chips button{color:var(--color-muted)}
+html[data-theme="dark"] .filter-chips button.active{background:#d16b37;color:#fff;border-color:#d16b37}
+html[data-theme="dark"] :is(.recipe-badge,.detail-photo-note){background:#29332c;color:#e6ded0}
+html[data-theme="dark"] :is(.hero-search button,.empty-state button,.see-more button:hover,.auth-primary,.account-primary,.recipe-json-primary,.create-buttons button,.create-entry-button){background:#b85728;color:#fff;border-color:#b85728}
+html[data-theme="dark"] :is(.hero-search button,.empty-state button,.see-more button:hover,.auth-primary,.account-primary,.recipe-json-primary,.create-buttons button,.create-entry-button):hover{background:#a34723}
+html[data-theme="dark"] .see-more button{background:transparent;color:var(--color-accent);border-color:var(--color-accent)}
+html[data-theme="dark"] .newsletter-section{background:#233126}
+html[data-theme="dark"] .newsletter-deco{color:#8fb698}
+html[data-theme="dark"] .newsletter-inner p{color:var(--color-muted)}
+html[data-theme="dark"] .newsletter-inner>button{background:#3b6949;color:#fff}
+html[data-theme="dark"] :is(.card-title-button,.card-title-button h3,.card-content,.footer-brand,.catalog-intro h1){color:var(--color-ink)}
+html[data-theme="dark"] .advanced-search-panel{background:#1f2921}
+html[data-theme="dark"] .advanced-reset{background:var(--color-paper);color:var(--color-accent)}
+html[data-theme="dark"] :is(.not-found-page,.catalog-intro){background:var(--color-page);color:var(--color-ink)}
+
+/* Recipe detail */
+html[data-theme="dark"] :is(.breadcrumbs a,.detail-rating strong,.ingredient-description,.ingredient-description strong,.preparation-panel,.panel-heading,.create-heading){color:var(--color-ink)}
+html[data-theme="dark"] :is(.detail-outline-button,.detail-icon-button,.ingredients-panel,.detail-stats,.create-card,.create-preview,.draft-disclaimer,.servings-stepper,.servings-stepper button,.add-row-button,.draft-remove){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] :is(.detail-photo,.create-preview img){background:#30392d}
+html[data-theme="dark"] :is(.detail-rating span,.panel-hint,.step-list p,.detail-tip p,.utensil-block li,.create-heading p,.catalog-intro p){color:var(--color-muted)}
+html[data-theme="dark"] :is(.ingredient-list li,.utensil-block,.preparation-progress,.step-list li,.panel-heading){border-color:var(--color-line)}
+html[data-theme="dark"] :is(.ingredient-picture,.tip-icon){background:#3c342b;color:#e9bd94;border-color:#514337}
+html[data-theme="dark"] .ingredient-vegetable{background:#253c2e;color:#9ecda3}
+html[data-theme="dark"] .ingredient-meat{background:#462c29;color:#e5aba4}
+html[data-theme="dark"] .ingredient-dairy{background:#3e3930;color:#edcf9d}
+html[data-theme="dark"] .ingredient-grain{background:#453b2b;color:#e5c58f}
+html[data-theme="dark"] .ingredient-spice{background:#3e3042;color:#d2a9df}
+html[data-theme="dark"] .ingredient-checked{color:var(--color-muted)}
+html[data-theme="dark"] .panel-note{background:#29382c;color:var(--color-ink);border-color:#3b6048}
+html[data-theme="dark"] .panel-note p{color:var(--color-muted)}
+html[data-theme="dark"] .preparation-progress{background:#282f29}
+html[data-theme="dark"] .progress-track{background:#414a3f}
+html[data-theme="dark"] .step-number{background:var(--color-soft);color:var(--color-accent);border-color:var(--color-line)}
+html[data-theme="dark"] .step-done .step-number{background:#3d6548;color:#fff}
+html[data-theme="dark"] .detail-tip{background:#25382a;border-color:#416049}
+html[data-theme="dark"] .form-field{color:var(--color-ink)}
+html[data-theme="dark"] :is(.form-field input,.form-field textarea,.form-field select,.create-card .form-field input[type=file]){background:#1b221c;color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] .draft-disclaimer{background:#2a332c}
+html[data-theme="dark"] .draft-remove:hover:not(:disabled){background:#49302c;color:#f5b2a2}
+html[data-theme="dark"] .add-row-button:hover{background:#403127;color:var(--color-accent)}
+html[data-theme="dark"] .draft-restore-banner{background:#332e22;border-color:#5d4a34}
+html[data-theme="dark"] .draft-restore-banner button{background:var(--color-paper);border-color:var(--color-line);color:var(--color-accent)}
+html[data-theme="dark"] :is(.form-error,.recipe-json-error,.recipe-json-warning){background:#4b2925;color:#ffc2aa;border-color:#75433a}
+html[data-theme="dark"] .draft-message{background:#25472e;color:#c5f2ca}
+
+/* Account pages, profile, favorites and cards */
+html[data-theme="dark"] :is(.account-sidebar,.account-main,.account-recipe-card,.account-upload-label,.account-recipe-actions button,.account-search input,.account-sort select,.account-form-grid input,.account-form-grid textarea,.account-security button){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] :is(.account-sidebar nav a,.account-form-grid label,.account-recipe-body h3 a,.account-upload-label){color:var(--color-ink)}
+html[data-theme="dark"] :is(.account-photo-control,.account-empty,.account-no-results,.account-security,.account-form-grid input:read-only){background:#29332b;color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] .account-sidebar .account-nav-active{background:#403127;color:var(--color-accent)}
+html[data-theme="dark"] .account-avatar{background:#355341;color:#e2f3e4}
+html[data-theme="dark"] .account-recipe-card>a{background:#2d352d}
+html[data-theme="dark"] .account-recipe-actions .account-danger{background:#462b2b;color:#ffb6a9;border-color:#71413d}
+html[data-theme="dark"] .account-empty-illustration{background:#443226;color:#ffad76}
+html[data-theme="dark"] .account-success{background:#25472e;color:#b6e6b8}
+html[data-theme="dark"] .account-error{background:#4b2925;color:#ffb8a4}
+html[data-theme="dark"] .account-theme-segments{background:#303b31}
+html[data-theme="dark"] .account-theme-segments button.is-active{background:#465345;color:#fff}
+
+/* Login, registration, recovery and account menu */
+html[data-theme="dark"] :is(.auth-layout,.auth-input-wrap,.profile-dropdown,.profile-trigger,.auth-demo-button,.auth-verification-icon){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] :is(.auth-field>label,.auth-checkbox,.auth-back,.auth-input-wrap input,.auth-reveal,.profile-dropdown button){color:var(--color-ink)}
+html[data-theme="dark"] :is(.auth-input-wrap input::placeholder){color:#989e94}
+html[data-theme="dark"] .auth-mark{background:#403127}
+html[data-theme="dark"] .auth-demo-button{background:#3b3029;color:#ffc6a3;border-color:#68503c}
+html[data-theme="dark"] .auth-bottom{border-color:var(--color-line)}
+html[data-theme="dark"] .auth-password-rules .valid{color:#a9d8b0}
+html[data-theme="dark"] .auth-password-rules .valid svg{background:#284833;color:#b6e3ba}
+html[data-theme="dark"] .auth-alert{background:#27422f;border-color:#43644c;color:#c1e8c7}
+html[data-theme="dark"] .auth-alert-error{background:#4b2925;border-color:#794b40;color:#ffc3b4}
+html[data-theme="dark"] .profile-dropdown button:hover{background:var(--color-soft)}
+html[data-theme="dark"] .profile-dropdown-head{border-color:var(--color-line)}
+html[data-theme="dark"] .profile-avatar{background:#36503e;color:#e8f1e7}
+html[data-theme="dark"] .auth-story-badge{background:#242b25;color:#fff}
+html[data-theme="dark"] .auth-story-eyebrow{color:#ffd1ad}
+
+/* JSON integration modal */
+html[data-theme="dark"] :is(.recipe-json-modal,.recipe-json-close,.recipe-json-secondary,.recipe-json-panel textarea){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] .recipe-json-panel textarea{background:#192119}
+html[data-theme="dark"] .recipe-json-feedback{background:#25472e;color:#b8eac2}
+html[data-theme="dark"] .recipe-json-tabs{border-color:var(--color-line)}
+html[data-theme="dark"] .recipe-json-overlay{background:#070b09d9}
+@media(prefers-reduced-motion:reduce){.account-theme-segments button{transition:none}}
