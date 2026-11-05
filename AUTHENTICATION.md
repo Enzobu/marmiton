@@ -1,11 +1,11 @@
 # Authentification — parcours frontend (phase UI)
 
 Les routes publiques sont :
-- `/connexion` : connexion, visibilité du mot de passe, se souvenir de moi (présentation uniquement) ;
-- `/inscription` : identité, email, mot de passe renforcé et confirmation ;
-- `/mot-de-passe-oublie` : demande de récupération ;
-- `/verification-email` : écran d'explication de confirmation ;
-- `/reinitialiser-mot-de-passe` : nouveau mot de passe et confirmation.
+- `/login` : connexion, visibilité du mot de passe, se souvenir de moi (présentation uniquement) ;
+- `/register` : identité, email, mot de passe renforcé et confirmation ;
+- `/forgot-password` : demande de récupération ;
+- `/verify-email` : écran d'explication de confirmation ;
+- `/reset-password` : nouveau mot de passe et confirmation.
 
 **Aucun endpoint d'authentification n'est encore branché.** Le bouton « Explorer avec un compte de démonstration » simule un profil uniquement en mémoire React, avec une adresse `example.invalid`. Il ne reçoit pas de mot de passe et disparaît au rechargement. Les formulaires ne créent aucun compte, n'envoient aucun courriel et ne modifient aucun identifiant. Les accès protégés et la sauvegarde des favoris ne sont pas encore implémentés.
 
@@ -21,3 +21,7 @@ Lors de l'implémentation de l'API :
 - Tester intégralement les flux nominaux et erreurs dans Postman et Bruno, ainsi que l'envoi réel sur un environnement de test contrôlé.
 
 Ne jamais considérer ces écrans comme une authentification sécurisée avant le branchement API.
+
+## Espace personnel (UI)
+
+Les URLs sont désormais en anglais : `/profile`, `/my-recipes`, `/favorites`, `/recipes`, `/recipes/new`, `/recipes/:id` et `/recipes/:id/edit` pour les créations de démonstration. Les libellés de l'interface restent en français. Les anciennes routes françaises ne sont plus utilisées. Toute modification, suppression, photo et préférence de profil est **en mémoire uniquement** ; recharger la page efface la simulation. L'API et les UUID v7 seront intégrés lors de l'étape backend.

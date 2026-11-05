@@ -103,4 +103,4 @@ export function formatQuantity(ingredient: Ingredient, servings: number, baseSer
   return `${formatted}${ingredient.unit ? ' ' + ingredient.unit : ''}`;
 }
 
-export function recipePath(id: number): string { return `/recettes/${id}`; }
+export function recipePath(id: number): string { return `/recipes/${id}`; }

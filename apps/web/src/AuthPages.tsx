@@ -5,11 +5,11 @@ export type DemoUser = { firstName: string; lastName: string; email: string };
 type AuthProps = { page: 'login' | 'register' | 'forgot' | 'verify' | 'reset'; navigate: (path: string) => void; onDemoLogin: (user: DemoUser) => void };
 
 export const AUTH_ROUTES = {
-  login: '/connexion',
-  register: '/inscription',
-  forgot: '/mot-de-passe-oublie',
-  verify: '/verification-email',
-  reset: '/reinitialiser-mot-de-passe'
+  login: '/login',
+  register: '/register',
+  forgot: '/forgot-password',
+  verify: '/verify-email',
+  reset: '/reset-password'
 } as const;
 
 export const normalizeEmail = (value: string) => value.trim().toLocaleLowerCase('fr');
@@ -105,7 +105,7 @@ export function AuthPage({ page, navigate, onDemoLogin }: AuthProps) {
           <h2>Vérification par e-mail</h2>
           <p>Un lien à usage unique sera envoyé lors de l’inscription. L’envoi d’e-mails et la validation des liens ne sont pas encore actifs.</p>
           <div className="auth-alert" role="status">Mode démonstration : aucun e-mail n’a été envoyé.</div>
-          <RouteLink to="/connexion" navigate={navigate} className="auth-primary auth-link-button">Retour à la connexion <Icon name="arrow" size={18}/></RouteLink>
+          <RouteLink to="/login" navigate={navigate} className="auth-primary auth-link-button">Retour à la connexion <Icon name="arrow" size={18}/></RouteLink>
         </div> :
         <form className="auth-form" onSubmit={submit}>
           {page === 'register' && <div className="auth-name-grid"><div className="auth-field"><label htmlFor="auth-firstname">Prénom</label><div className="auth-input-wrap"><Icon name="user"/><input id="auth-firstname" value={firstName} onChange={event => setFirstName(event.target.value)} autoComplete="given-name" placeholder="Camille" required maxLength={70}/></div></div><div className="auth-field"><label htmlFor="auth-lastname">Nom</label><div className="auth-input-wrap"><Icon name="user"/><input id="auth-lastname" value={lastName} onChange={event => setLastName(event.target.value)} autoComplete="family-name" placeholder="Martin" required maxLength={70}/></div></div></div>}
@@ -117,15 +117,15 @@ export function AuthPage({ page, navigate, onDemoLogin }: AuthProps) {
             </div>
             <PasswordField id="auth-confirm" label="Confirmer le mot de passe" value={confirm} onChange={setConfirm} autoComplete="new-password" placeholder="Répète ton mot de passe"/>
           </>}
-          {page === 'login' && <div className="auth-form-options"><label className="auth-checkbox"><input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)}/>Se souvenir de moi</label><RouteLink navigate={navigate} to="/mot-de-passe-oublie">Mot de passe oublié ?</RouteLink></div>}
+          {page === 'login' && <div className="auth-form-options"><label className="auth-checkbox"><input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)}/>Se souvenir de moi</label><RouteLink navigate={navigate} to="/forgot-password">Mot de passe oublié ?</RouteLink></div>}
           {feedback && <div className={`auth-alert ${feedbackType === 'error' ? 'auth-alert-error' : ''}`} role={feedbackType === 'error' ? 'alert' : 'status'}>{feedback}</div>}
           <button className="auth-primary" type="submit">{page === 'login' ? 'Se connecter' : page === 'register' ? 'Créer mon compte' : page === 'forgot' ? 'Demander un lien' : 'Modifier mon mot de passe'}<Icon name="arrow" size={18}/></button>
           {page === 'login' && <button className="auth-demo-button" type="button" onClick={() => onDemoLogin({ firstName: 'Camille', lastName: 'Martin', email: 'demo@example.invalid' })}>Explorer avec un compte de démonstration</button>}
-          {submitted && page === 'register' && <button className="auth-demo-button" type="button" onClick={() => navigate('/verification-email')}>Découvrir l’écran de vérification</button>}
-          {submitted && page === 'forgot' && <button className="auth-demo-button" type="button" onClick={() => navigate('/reinitialiser-mot-de-passe')}>Découvrir l’écran de réinitialisation</button>}
+          {submitted && page === 'register' && <button className="auth-demo-button" type="button" onClick={() => navigate('/verify-email')}>Découvrir l’écran de vérification</button>}
+          {submitted && page === 'forgot' && <button className="auth-demo-button" type="button" onClick={() => navigate('/reset-password')}>Découvrir l’écran de réinitialisation</button>}
         </form>}
 
-        <div className="auth-bottom">{page === 'login' ? <>Pas encore de compte ? <RouteLink to="/inscription" navigate={navigate}>S’inscrire</RouteLink></> : page === 'register' ? <>Déjà inscrit ? <RouteLink to="/connexion" navigate={navigate}>Se connecter</RouteLink></> : <RouteLink to="/connexion" navigate={navigate}>Retour à la connexion</RouteLink>}</div>
+        <div className="auth-bottom">{page === 'login' ? <>Pas encore de compte ? <RouteLink to="/register" navigate={navigate}>S’inscrire</RouteLink></> : page === 'register' ? <>Déjà inscrit ? <RouteLink to="/login" navigate={navigate}>Se connecter</RouteLink></> : <RouteLink to="/login" navigate={navigate}>Retour à la connexion</RouteLink>}</div>
         <p className="auth-demo-disclaimer"><Icon name="shield" size={14}/> Maquette interactive : aucune authentification ni transmission de mot de passe.</p>
       </section>
       <aside className="auth-story" aria-label="Inspiration cuisine">
