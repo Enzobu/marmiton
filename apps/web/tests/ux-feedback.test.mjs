@@ -19,7 +19,8 @@ test('Destructive actions use accessible confirmation dialogs', () => {
 });
 test('UX feedback reports demo actions without misleading API success', () => {
   assert.match(app, /notify\('Recette de démonstration enregistrée.'/);
-  assert.match(app, /notify\('Recette ajoutée aux favoris.'/);
+  assert.match(app, /'Recette ajoutée aux favoris.'/);
+  assert.match(app, /notify\(alreadySaved/);
   assert.match(app, /<ToastRegion toast=\{toast\}/);
   assert.match(feedback, /role=\{toast.type === 'error' \? 'alert' : 'status'\}/);
 });
