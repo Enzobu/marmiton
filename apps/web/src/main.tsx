@@ -71,9 +71,9 @@ function App() {
   const isCreate = path === '/recipes/new';
   const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
   const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe;
-  const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number) => {
+  const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number, metadata: { rest: number; budget: string; utensils: string[]; servings: number }) => {
     ingredientQuantities[recipe.id] = ingredients;
-    recipePreparation[recipe.id] = { prep, cook, rest: 0, budget: 'Non renseigné', utensils: [] };
+    recipePreparation[recipe.id] = { prep, cook, ...metadata };
     setCreatedRecipes(current => [recipe, ...current.filter(item => item.id !== recipe.id)]);
   };
   const deleteCreatedRecipe = (id: number) => {

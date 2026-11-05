@@ -11,6 +11,7 @@ export type Recipe = {
   ingredients: string[];
   steps: string[];
   badge?: string;
+  servings?: number;
 };
 
 export const recipes: Recipe[] = [
@@ -85,7 +86,7 @@ export const ingredientQuantities: Record<number, Ingredient[]> = {
     { name: 'Cannelle', amount: 1, unit: 'c. à café', icon: 'spice' }
   ]
 };
-export const recipePreparation: Record<number, { prep: number; cook: number; rest: number; budget: string; utensils: string[] }> = {
+export const recipePreparation: Record<number, { prep: number; cook: number; rest: number; budget: string; utensils: string[]; servings?: number }> = {
   1: { prep: 30, cook: 45, rest: 0, budget: 'Moyen', utensils: ['Plat à gratin', 'Poêle', 'Four'] },
   2: { prep: 15, cook: 10, rest: 0, budget: 'Bon marché', utensils: ['Four', 'Moule', 'Saladier'] },
   3: { prep: 15, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Couteau', 'Saladier'] },
