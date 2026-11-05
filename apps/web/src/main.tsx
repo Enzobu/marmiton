@@ -113,8 +113,11 @@ function App() {
         {visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={() => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); }}>Voir toutes les recettes</button></div>}
         {filtered.length > visible.length && <div className="see-more"><button onClick={() => setShowAll(true)}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
       </section>}
-      {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recettes/nouvelle")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>
+      {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recettes/nouvelle")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>
+    {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
+    {isCreate && <RecipeCreate navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
     <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 
   </>;
