@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { recipes, ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
+import { filterCatalogRecipes, parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { createRoot } from 'react-dom/client';
@@ -42,8 +43,12 @@ function RecipeCard({ recipe, saved, onToggle, onOpen }: { recipe: Recipe; saved
 }
 
 function App() {
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('Toutes les recettes');
+  const [search, setSearch] = useState(() => parseCatalogQuery(window.location.search).query);
+  const [category, setCategory] = useState(() => parseCatalogQuery(window.location.search).category);
+  const [difficultyFilter, setDifficultyFilter] = useState<CatalogFilters['difficulty']>(() => parseCatalogQuery(window.location.search).difficulty);
+  const [budgetFilter, setBudgetFilter] = useState<CatalogFilters['budget']>(() => parseCatalogQuery(window.location.search).budget);
+  const [maxTimeFilter, setMaxTimeFilter] = useState<number | null>(() => parseCatalogQuery(window.location.search).maxTime);
+  const [sortFilter, setSortFilter] = useState<CatalogSort>(() => parseCatalogQuery(window.location.search).sort);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
@@ -64,11 +69,25 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   useEffect(() => {
-    const onPop = () => setPath(window.location.pathname);
+    const onPop = () => {
+      setPath(window.location.pathname);
+      if (window.location.pathname === '/recipes') {
+        const parsed = parseCatalogQuery(window.location.search);
+        setSearch(parsed.query); setCategory(parsed.category);
+        setDifficultyFilter(parsed.difficulty); setBudgetFilter(parsed.budget);
+        setMaxTimeFilter(parsed.maxTime); setSortFilter(parsed.sort);
+      }
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
   const allRecipes = useMemo(() => [...createdRecipes, ...recipes], [createdRecipes]);
+  const catalogFilters: CatalogFilters = { query: search, category, difficulty: difficultyFilter, budget: budgetFilter, maxTime: maxTimeFilter, sort: sortFilter };
+  useEffect(() => {
+    if (path !== '/recipes') return;
+    const desired = `/recipes${serializeCatalogQuery(catalogFilters)}`;
+    if (window.location.pathname + window.location.search !== desired) window.history.replaceState(null, '', desired);
+  }, [path, search, category, difficultyFilter, budgetFilter, maxTimeFilter, sortFilter]);
   const detailId = /^\/recipes\/(\d+)$/.exec(path)?.[1];
   const editId = /^\/recipes\/(\d+)\/edit$/.exec(path)?.[1];
   const editRecipe = editId ? createdRecipes.find(recipe => recipe.id === Number(editId)) : undefined;
@@ -91,17 +110,22 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
-  const filtered = useMemo(() => allRecipes.filter(recipe => {
-    const haystack = [recipe.title, recipe.description, recipe.category, ...recipe.ingredients].join(' ').toLocaleLowerCase('fr');
-    return haystack.includes(search.trim().toLocaleLowerCase('fr')) && (category === 'Toutes les recettes' || recipe.category === category) && (!onlyFavorites || favorites.includes(recipe.id));
-  }), [search, category, onlyFavorites, favorites, allRecipes]);
+  const filtered = useMemo(() => filterCatalogRecipes(allRecipes, recipePreparation, {
+    query: search, category,
+    difficulty: isCatalog ? difficultyFilter : '',
+    budget: isCatalog ? budgetFilter : '',
+    maxTime: isCatalog ? maxTimeFilter : null,
+    sort: isCatalog ? sortFilter : 'relevance'
+  }).filter(recipe => !onlyFavorites || favorites.includes(recipe.id)), [allRecipes, search, category, isCatalog, difficultyFilter, budgetFilter, maxTimeFilter, sortFilter, onlyFavorites, favorites]);
+  const resetAdvancedFilters = () => { setSearch(''); setCategory('Toutes les recettes'); setDifficultyFilter(''); setBudgetFilter(''); setMaxTimeFilter(null); setSortFilter('relevance'); setOnlyFavorites(false); };
+  const hasCatalogFilters = Boolean(search || category !== 'Toutes les recettes' || difficultyFilter || budgetFilter || maxTimeFilter !== null || sortFilter !== 'relevance');
 
   const visible = (isCatalog || search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
   const toggleFavorite = (id: number) => setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
   const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
   const openFavorites = () => { setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/favorites'); };
-  const reset = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
-  const browse = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
+  const reset = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
+  const browse = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
   const openRecipe = (recipe: Recipe) => navigate(recipePath(recipe.id));
 
   return <>
@@ -144,7 +168,14 @@ function App() {
       {isCatalog && <section className="catalog-intro"><span className="section-kicker">Toutes les bonnes idées</span><h1>À chaque envie, sa recette.</h1><p>Un petit creux, une grande occasion ou simplement envie de cuisiner ? Explore notre carnet et trouve de quoi régaler tout le monde.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Chercher une recette</label><input id="catalog-search" placeholder="Une recette, un ingrédient..." value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form></section>}
       {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Des idées pour se régaler'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Nos recettes à découvrir' : category}</h2></div><span className="recipe-count">{filtered.length} recette{filtered.length > 1 ? 's' : ''}</span></div>
         <div className="filter-bar"><div className="filter-chips" role="group" aria-label="Filtrer les recettes"><button className={category === 'Toutes les recettes' && !onlyFavorites ? 'active' : ''} onClick={() => { setOnlyFavorites(false); setCategory('Toutes les recettes'); }}>Tout voir</button>{categories.slice(1).map(item => <button key={item} className={!onlyFavorites && category === item ? 'active' : ''} onClick={() => { setCategory(item); setOnlyFavorites(false); }}>{item}</button>)}<button className={onlyFavorites ? 'active' : ''} onClick={openFavorites}><Icon name="heart" size={14}/>Favoris</button></div><span className="filter-caption"><Icon name="sliders" size={17}/> Trouve ton bonheur</span></div>
-        {visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={() => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); }}>Voir toutes les recettes</button></div>}
+        {isCatalog && <div className="advanced-search-panel" role="group" aria-label="Filtres avancés">
+          <label>Difficulté<select value={difficultyFilter} onChange={event => setDifficultyFilter(event.target.value as CatalogFilters['difficulty'])}><option value="">Toutes</option><option value="Facile">Facile</option><option value="Moyen">Moyen</option></select></label>
+          <label>Durée totale<select value={maxTimeFilter ?? ''} onChange={event => setMaxTimeFilter(event.target.value ? Number(event.target.value) : null)}><option value="">Toutes</option><option value="15">15 min max</option><option value="30">30 min max</option><option value="45">45 min max</option><option value="60">1 h max</option><option value="90">1 h 30 max</option><option value="120">2 h max</option></select></label>
+          <label>Budget<select value={budgetFilter} onChange={event => setBudgetFilter(event.target.value as CatalogFilters['budget'])}><option value="">Tous</option><option value="Bon marché">Bon marché</option><option value="Moyen">Moyen</option><option value="Assez cher">Assez cher</option></select></label>
+          <label>Trier par<select value={sortFilter} onChange={event => setSortFilter(event.target.value as CatalogSort)}><option value="relevance">Par défaut</option><option value="popular">Plus populaires</option><option value="rating">Mieux notées</option><option value="prep">Préparation rapide</option><option value="time">Durée totale</option></select></label>
+          {hasCatalogFilters && <button type="button" className="advanced-reset" onClick={resetAdvancedFilters}>Effacer les filtres</button>}
+        </div>}
+        {visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
         {filtered.length > visible.length && <div className="see-more"><button onClick={() => setShowAll(true)}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
       </section>}
       {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
