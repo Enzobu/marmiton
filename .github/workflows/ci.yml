@@ -95,18 +95,16 @@ jobs:
           DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
-          APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
+          APP_HEALTH_URL: ${{ vars.APP_HEALTH_URL }}
         run: |
           test -n "$DOKPLOY_URL" || { echo "::error::Missing DOKPLOY_URL variable"; exit 1; }
           test -n "$DOKPLOY_API_KEY" || { echo "::error::Missing DOKPLOY_API_KEY secret"; exit 1; }
           test -n "$DOKPLOY_COMPOSE_ID" || { echo "::error::Missing DOKPLOY_COMPOSE_ID secret"; exit 1; }
-          test -n "$APP_VERSION_URL" || { echo "::error::Missing APP_VERSION_URL variable"; exit 1; }
-      - name: Trigger Dokploy and verify deployed revision
+      - name: Trigger Dokploy and check deployment completion
         env:
           DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
           EXPECTED_SOURCE_REF: ${{ github.ref }}
-          EXPECTED_COMMIT_SHA: ${{ github.sha }}
-          APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
-        run: bash agent/scripts/dokploy_deploy.sh
+          APP_HEALTH_URL: ${{ vars.APP_HEALTH_URL }}
+        run: bash scripts/dokploy_deploy.sh
