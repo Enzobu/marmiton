@@ -24,9 +24,9 @@ main (production)
 
 Configurer sur GitHub les Rulesets des deux branches pour interdire les pushes directs, exiger des PR et le check `ci-required`. Le connecteur GitHub ne permet pas de lire les protections existantes (403) : cette étape doit être vérifiée dans les réglages GitHub.
 
-## Déploiement production (workflow préparé, non activé)
+## Déploiement production (workflow activé dès promotion sur main)
 
-La cible souhaitée est **Dokploy, production seule, déclenchée depuis `main` après une CI réussie**. Le job `deploy-prod` est prêt dans le workflow CI, mais désactivé par défaut (`CD_ENABLED` absent ou différent de `true`). Il ne s'exécute que pour un `push` sur `main` avec `ci-required` réussi. Aucun déploiement n'a été effectué.
+La cible souhaitée est **Dokploy, production seule, déclenchée depuis `main` après une CI réussie**. Le job `deploy-prod` est activé : il est déclenché exclusivement par un **push sur `main`**, après réussite de `ci-required` sur ce même run. Il reste absent de `main` tant que la promotion `dev` vers `main` n'a pas été autorisée et réalisée. Aucun déploiement n'a été effectué lors de cette préparation.
 
 Avant d'activer le job de production :
 
@@ -37,7 +37,7 @@ Avant d'activer le job de production :
 
 La politique demandée est enregistrée dans `.agent/project-policy.yml`, avec une extension locale documentée qui ne modifie pas les règles canoniques du template.
 
-### Activer la CD Dokploy
+### Configurer et vérifier la CD Dokploy
 
 Les paramètres fournis dans GitHub sont :
 - secrets : `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` ;
@@ -45,8 +45,25 @@ Les paramètres fournis dans GitHub sont :
 
 Configurer également, au même niveau que ces paramètres (ou dans l'environnement GitHub `production`) :
 - `APP_HEALTH_URL` (facultative pendant cette phase) : URL HTTPS de disponibilité HTTP de l'application, par exemple `/api/health`. Sans elle, le job ne valide pas la santé de l'application.
-- `CD_ENABLED` : laisser absent ou `false` jusqu'à la vérification de la source Git Dokploy, du format de réponse de l'API Dokploy et du rollback. Passer à `true` uniquement après cette vérification.
+- Aucun flag `CD_ENABLED` n'est nécessaire : le déclenchement sur `main` est automatique dès que ce workflow y est intégré.
 
 **Contrôle de version temporairement suspendu à la demande du propriétaire.** Le script spécifique `scripts/dokploy_deploy.sh` exige la branche `main`, l'identifiant du nouveau déploiement et son succès terminal. Il ne vérifie **pas** le SHA servi et ne doit jamais annoncer une version exacte déployée. Les règles et scripts canoniques `agent/` restent inchangés. À l'arrivée de l'API, ajouter `/api/version` et rétablir la vérification stricte `APP_VERSION_URL` / SHA avec tests. La compatibilité du parsing Dokploy doit encore être vérifiée contre l'instance avant activation.
 
-L'option `CD_ENABLED` protège contre les déploiements accidentels pendant le setup. Après activation, chaque fusion approuvée sur `main` entraîne automatiquement la tentative de déploiement, sans fusion automatique sur `main`. Pour une protection supplémentaire, configurer l'environnement GitHub `production` (restrictions aux branches `main`, éventuelle approbation).
+Les PR sur `dev` ne déploient pas. Chaque fusion approuvée sur `main` entraînera automatiquement une tentative de déploiement, sans fusion automatique sur `main`. Pour une protection supplémentaire, configurer l'environnement GitHub `production` (restrictions aux branches `main`, éventuelle approbation).
+
+## Frontend et Docker Compose (phase UI)
+
+Le fichier Compose unique est désormais `docker-compose.yml` à la racine, et **seul** `.env.example` est versionné. Pour tester l'interface en local :
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml up --build -d web
+```
+
+Par défaut, l'interface est accessible sur `http://localhost:8080`. Modifier `WEB_PORT` dans `.env` ou les variables Dokploy si nécessaire. `WEB_BIND_ADDRESS` permet de choisir l'interface d'écoute. Le service web fonctionne seul, avec des recettes fictives. Les images des recettes sont chargées depuis Unsplash tant que les uploads ne sont pas implémentés.
+
+Les services `api` et `db` sont conservés sous le profil `backend` : `docker compose -f docker-compose.yml --profile backend up --build -d` après renseignement des identifiants MariaDB, préparation des chemins absolus `DB_DATA_PATH` et `UPLOADS_PATH`, et mise en place des migrations. Un démarrage en production avec la base exige aussi des sauvegardes et une revue des permissions.
+
+**Dokploy :** sélectionner `docker-compose.yml` en configuration Compose et publier le port conteneur `80` du service `web`. Les publications de ports sur l'hôte peuvent être ajustées depuis `.env`/les variables Dokploy ; elles ne remplacent pas la configuration du routage Traefik.
+
+**Limites CD :** le contrôle de SHA est différé à l'API. La corrélation d'identifiant de déploiement du script Dokploy n'a pas encore été testée sur l'instance réelle. Un push sur `main` pourrait donc déclencher la CD puis échouer à la vérification, ce qui devra être diagnostiqué sans prétendre que le déploiement est validé.
