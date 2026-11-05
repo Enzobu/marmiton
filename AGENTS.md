@@ -36,3 +36,13 @@ Pour les procédures disponibles, lire [agent/docs/SKILLS.md](agent/docs/SKILLS.
 ## Template GitHub — organisation V3
 
 Les ressources du référentiel sont centralisées dans `agent/` (`agent/rules/`, `agent/skills/`, `agent/scripts/`, `agent/docs/`, `agent/tests/`). Les fichiers natifs `AGENTS.md`, `CLAUDE.md`, `.claude/rules/` et `.github/workflows/` restent à la racine. Pour initialiser un dépôt créé depuis ce template : `bash agent/scripts/init.sh --profile standard` (prévisualisation), puis ajouter `--write` après validation. **Aucun Python nécessaire à cette initialisation**. Lire [le guide](agent/docs/TEMPLATE.md).
+
+## Workflow spécifique au dépôt Marmiton
+
+La politique approuvée de ce dépôt est dans `.agent/project-policy.yml` (voir aussi `WORKFLOW.md`). Ne pas modifier les Rules/Skills canoniques pour ces choix locaux.
+
+- `main` = production ; `dev` = intégration ; toute branche de fonctionnalité part de `dev` et ouvre une PR vers `dev`.
+- Le propriétaire autorise à l'avance la fusion des PR de feature **sur `dev` uniquement**, après réussite de tous les contrôles requis, absence de conflit et revue des différences. Cette exception locale précise l'autorisation de merge G19/H18; ne jamais contourner une protection GitHub.
+- Chaque promotion `dev` → `main` exige une PR et une autorisation explicite distincte, même si la CI est verte. Ne jamais committer directement sur `main`.
+- Une fois configurée et activée, la CD production sera déclenchée uniquement sur un merge/push de `main`, jamais sur `dev`. Aucun déploiement réel sans secrets Dokploy, vérification du SHA et contrôles de santé opérationnels.
+- Après merge confirmé vers `dev`, fermer les issues réellement terminées et nettoyer les branches de features intégrées selon G20/H15.
