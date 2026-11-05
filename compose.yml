@@ -1,0 +1,51 @@
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:?DB_NAME required}
+      MARIADB_USER: ${DB_USER:?DB_USER required}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD required}
+    volumes:
+      - type: bind
+        source: ${DB_DATA_PATH:?DB_DATA_PATH required}
+        target: /var/lib/mysql
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      API_PORT: "3001"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      DATABASE_URL: mysql://${DB_USER}:${DB_PASSWORD}@db:3306/${DB_NAME}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ${UPLOADS_PATH:?UPLOADS_PATH required}
+        target: /app/uploads
+        bind:
+          create_host_path: false
+    ports:
+      - "127.0.0.1:${API_PORT:-3001}:3001"
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
