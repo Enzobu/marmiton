@@ -35,4 +35,4 @@ workflow:
     preproduction: false
     # Intégration Dokploy activable uniquement après configuration
     # des secrets, preuve SHA, healthcheck et vérification du rollback.
-    cd_status: not_configured
+    cd_status: prepared_disabled
