@@ -78,7 +78,7 @@ type DraftIngredient = { id: number; name: string; amount: string; unit: string 
 type DraftStep = { id: number; value: string };
 const demoImage = 'https://images.unsplash.com/photo-1547592180-85f173990554?w=900&q=85';
 
-export function RecipeCreate({ navigate, onCreate }: { navigate: Navigate; onCreate: (recipe: Recipe, ingredients: Ingredient[]) => void }) {
+export function RecipeCreate({ navigate, onCreate }: { navigate: Navigate; onCreate: (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number) => void }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Plats');
@@ -101,7 +101,7 @@ export function RecipeCreate({ navigate, onCreate }: { navigate: Navigate; onCre
     }
     const id = Date.now();
     const recipe: Recipe = { id, title: title.trim(), description: description.trim(), category, difficulty, image: image.trim() || demoImage, time: prep + cook, rating: 0, reviews: 0, ingredients: items.map(item => item.name.trim()), steps: steps.map(item => item.value.trim()), badge: 'Ma création' };
-    onCreate(recipe, items.map(item => ({ name: item.name.trim(), amount: Number(item.amount) * BASE_SERVINGS / servings, unit: item.unit.trim() || undefined, icon: 'other' })));
+    onCreate(recipe, items.map(item => ({ name: item.name.trim(), amount: Number(item.amount) * BASE_SERVINGS / servings, unit: item.unit.trim() || undefined, icon: 'other' })), prep, cook);
     navigate(recipePath(id));
   };
   return <main className="create-page"><div className="detail-container"><nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => {event.preventDefault();navigate('/');}}>Accueil</a><span>/</span><a href="/recettes" onClick={event => {event.preventDefault();navigate('/recettes');}}>Recettes</a><span>/</span><span aria-current="page">Nouvelle recette</span></nav>
