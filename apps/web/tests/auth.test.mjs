@@ -6,7 +6,7 @@ const auth = readFileSync(new URL('../src/AuthPages.tsx', import.meta.url), 'utf
 const css = readFileSync(new URL('../src/auth.css', import.meta.url), 'utf8');
 
 test('Authentication has dedicated deep links', () => {
-  for (const route of ['/connexion', '/inscription', '/mot-de-passe-oublie', '/verification-email', '/reinitialiser-mot-de-passe']) {
+  for (const route of ['/login', '/register', '/forgot-password', '/verify-email', '/reset-password']) {
     assert.ok(auth.includes(route), route);
   }
   assert.match(main, /authPage && <AuthPage/);
