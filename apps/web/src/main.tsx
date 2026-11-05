@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { recipes, ingredientQuantities, recipePath, type Recipe, type Ingredient } from './recipe-data';
+import { recipes, ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
@@ -63,8 +63,9 @@ function App() {
   const isCatalog = path === '/recettes';
   const isCreate = path === '/recettes/nouvelle';
   const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe;
-  const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[]) => {
+  const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number) => {
     ingredientQuantities[recipe.id] = ingredients;
+    recipePreparation[recipe.id] = { prep, cook, rest: 0, budget: 'Non renseigné', utensils: [] };
     setCreatedRecipes(current => [recipe, ...current]);
   };
   const [menuOpen, setMenuOpen] = useState(false);
