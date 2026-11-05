@@ -28,10 +28,10 @@ Configurer sur GitHub les Rulesets des deux branches pour interdire les pushes d
 
 La cible souhaitée est **Dokploy, production seule, déclenchée depuis `main` après une CI réussie**. Le job `deploy-prod` est prêt dans le workflow CI, mais désactivé par défaut (`CD_ENABLED` absent ou différent de `true`). Il ne s'exécute que pour un `push` sur `main` avec `ci-required` réussi. Aucun déploiement n'a été effectué.
 
-Avant de créer/activer le job de production :
+Avant d'activer le job de production :
 
-1. Définir le GitHub Environment `production` avec secrets `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` et variables `DOKPLOY_URL`, `APP_HEALTH_URL`, `APP_VERSION_URL`.
-2. Vérifier la compatibilité de `agent/scripts/dokploy_deploy.sh` avec la version réelle de Dokploy, l'identifiant du nouveau déploiement, la correspondance SHA et les healthchecks.
+1. Définir le GitHub Environment `production` avec secrets `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` et variables `DOKPLOY_URL` et éventuellement `APP_HEALTH_URL`.
+2. Vérifier la compatibilité de `agent/scripts/dokploy_deploy.sh` avec la version réelle de Dokploy, l'identifiant du nouveau déploiement et les états terminaux.
 3. Construire la CD dans le même workflow, conditionnée par `needs: ci-required` et `github.ref == 'refs/heads/main'` ; ne pas réutiliser un contrôle vert d'un autre SHA.
 4. Tester la méthode de rollback, la stratégie de migration et les sauvegardes avant la première activation. Ne jamais pointer de collections de test sur la production.
 
@@ -44,9 +44,9 @@ Les paramètres fournis dans GitHub sont :
 - variable : `DOKPLOY_URL` (URL HTTPS de l'instance Dokploy).
 
 Configurer également, au même niveau que ces paramètres (ou dans l'environnement GitHub `production`) :
-- `APP_VERSION_URL` : URL HTTPS renvoyant un JSON contenant un champ `sha`, `commitSha` ou `gitSha`, correspondant **exactement** au commit GitHub livré.
-- `CD_ENABLED` : laisser absent ou `false` jusqu'à la vérification de la source Git Dokploy, de l'endpoint de version, du format de réponse de l'API Dokploy et du rollback. Passer à `true` uniquement après cette vérification.
+- `APP_HEALTH_URL` (facultative pendant cette phase) : URL HTTPS de disponibilité HTTP de l'application, par exemple `/api/health`. Sans elle, le job ne valide pas la santé de l'application.
+- `CD_ENABLED` : laisser absent ou `false` jusqu'à la vérification de la source Git Dokploy, du format de réponse de l'API Dokploy et du rollback. Passer à `true` uniquement après cette vérification.
 
-**Important :** le squelette actuel ne publie pas encore un endpoint de version contenant le SHA. La CD ne doit pas être activée tant qu'il n'existe pas et que Dokploy ne construit pas le commit attendu. Le script `agent/scripts/dokploy_deploy.sh` exige que la source Dokploy soit la branche `main`, qu'un nouvel identifiant de déploiement soit retourné et que sa terminaison et le SHA soient vérifiables. Certaines versions de Dokploy nécessitent une adaptation du parsing ; ne pas considérer un HTTP 2xx comme une preuve de succès.
+**Contrôle de version temporairement suspendu à la demande du propriétaire.** Le script spécifique `scripts/dokploy_deploy.sh` exige la branche `main`, l'identifiant du nouveau déploiement et son succès terminal. Il ne vérifie **pas** le SHA servi et ne doit jamais annoncer une version exacte déployée. Les règles et scripts canoniques `agent/` restent inchangés. À l'arrivée de l'API, ajouter `/api/version` et rétablir la vérification stricte `APP_VERSION_URL` / SHA avec tests. La compatibilité du parsing Dokploy doit encore être vérifiée contre l'instance avant activation.
 
 L'option `CD_ENABLED` protège contre les déploiements accidentels pendant le setup. Après activation, chaque fusion approuvée sur `main` entraîne automatiquement la tentative de déploiement, sans fusion automatique sur `main`. Pour une protection supplémentaire, configurer l'environnement GitHub `production` (restrictions aux branches `main`, éventuelle approbation).
