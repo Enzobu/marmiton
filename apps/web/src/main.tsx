@@ -75,7 +75,7 @@ function App() {
     return haystack.includes(search.trim().toLocaleLowerCase('fr')) && (category === 'Toutes les recettes' || recipe.category === category) && (!onlyFavorites || favorites.includes(recipe.id));
   }), [search, category, onlyFavorites, favorites, allRecipes]);
 
-  const visible = (search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
+  const visible = (isCatalog || search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
   const toggleFavorite = (id: number) => setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
   const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
   const openFavorites = () => { setOnlyFavorites(true); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
@@ -95,7 +95,7 @@ function App() {
       </div>
       {menuOpen && <nav className="mobile-navigation" aria-label="Navigation mobile"><button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recettes/nouvelle"); }}>Créer une recette</button></nav>}
     </header>
-    <main>
+    {(isHome || isCatalog) && <main>
       {isHome && <>
       <section className="hero">
         <div className="hero-inner">
@@ -114,7 +114,7 @@ function App() {
         {filtered.length > visible.length && <div className="see-more"><button onClick={() => setShowAll(true)}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
       </section>}
       {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recettes/nouvelle")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
-    </main>
+    </main>}
     {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && <RecipeCreate navigate={navigate} onCreate={addCreatedRecipe}/>}
     {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
