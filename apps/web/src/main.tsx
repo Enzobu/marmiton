@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { recipes, ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
+import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
@@ -45,6 +46,8 @@ function App() {
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
+  const [demoUser, setDemoUser] = useState<DemoUser | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [path, setPath] = useState(window.location.pathname);
   const navigate = (next: string) => {
     if (window.location.pathname !== next) window.history.pushState(null, '', next);
@@ -62,7 +65,8 @@ function App() {
   const isHome = path === '/';
   const isCatalog = path === '/recettes';
   const isCreate = path === '/recettes/nouvelle';
-  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe;
+  const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
+  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage;
   const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number) => {
     ingredientQuantities[recipe.id] = ingredients;
     recipePreparation[recipe.id] = { prep, cook, rest: 0, budget: 'Non renseigné', utensils: [] };
@@ -92,7 +96,7 @@ function App() {
         <nav className="desktop-navigation" aria-label="Navigation principale">
           <button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recettes/nouvelle"); }}>Créer une recette</button>
         </nav>
-        <div className="header-actions"><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button><button className="signin-button" disabled title="Disponible après l'intégration de l'authentification"><Icon name="user" size={17}/>Connexion</button><button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
+        <div className="header-actions"><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap"><button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}><span className="profile-avatar">{(demoUser.firstName.charAt(0) + demoUser.lastName.charAt(0)).toUpperCase()}</span><span>{demoUser.firstName}</span></button>{profileOpen && <div className="profile-dropdown"><div className="profile-dropdown-head"><strong>{demoUser.firstName} {demoUser.lastName}</strong><span>{demoUser.email}</span></div><button onClick={() => { setProfileOpen(false); navigate('/recettes/nouvelle'); }}>Créer une recette</button><button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button><button onClick={() => { setDemoUser(null); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button><span className="profile-demo-tag">Compte de démonstration, non persistant</span></div>}</div> : <button className="signin-button" onClick={() => navigate('/connexion')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
       </div>
       {menuOpen && <nav className="mobile-navigation" aria-label="Navigation mobile"><button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recettes/nouvelle"); }}>Créer une recette</button></nav>}
     </header>
@@ -118,6 +122,7 @@ function App() {
     </main>}
     {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && <RecipeCreate navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={user => { setDemoUser(user); setProfileOpen(false); navigate("/"); } }/>}
     {isNotFound && <main className="not-found-page"><h1>Cette recette est introuvable</h1><p>Elle n'existe pas dans notre carnet de démonstration.</p><button onClick={browse}>Voir les recettes</button></main>}
     <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 
