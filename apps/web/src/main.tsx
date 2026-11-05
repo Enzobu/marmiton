@@ -1,32 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { recipes, ingredientQuantities, recipePath, type Recipe, type Ingredient } from './recipe-data';
+import { RecipeDetail, RecipeCreate } from './RecipePages';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
-
-type Recipe = {
-  id: number;
-  title: string;
-  image: string;
-  category: string;
-  time: number;
-  difficulty: 'Facile' | 'Moyen';
-  rating: number;
-  reviews: number;
-  description: string;
-  ingredients: string[];
-  steps: string[];
-  badge?: string;
-};
-
-const recipes: Recipe[] = [
-  { id: 1, title: 'Lasagnes à la bolognaise maison', category: 'Plats', time: 75, difficulty: 'Moyen', rating: 4.9, reviews: 342, badge: 'Coup de cœur', image: 'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?w=900&q=85', description: 'Des lasagnes généreuses, fondantes et gratinées, à partager autour de la table.', ingredients: ['Feuilles de lasagne', 'Viande hachée', 'Sauce tomate', 'Béchamel', 'Oignon'], steps: ['Préparer la sauce bolognaise.', 'Alterner les couches de pâtes et de sauces.', 'Enfourner jusqu’à obtenir un beau gratin.'] },
-  { id: 2, title: 'Moelleux au chocolat cœur fondant', category: 'Desserts', time: 25, difficulty: 'Facile', rating: 4.9, reviews: 578, badge: 'Très populaire', image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=900&q=85', description: 'Le dessert chocolaté incontournable, avec un cœur délicieusement coulant.', ingredients: ['Chocolat noir', 'Beurre', 'Œufs', 'Sucre', 'Farine'], steps: ['Faire fondre le chocolat et le beurre.', 'Incorporer les œufs, le sucre et la farine.', 'Cuire rapidement pour garder le cœur fondant.'] },
-  { id: 3, title: 'Salade fraîcheur à la grecque', category: 'Entrées', time: 15, difficulty: 'Facile', rating: 4.7, reviews: 124, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&q=85', description: 'Une assiette ensoleillée, croquante et pleine de fraîcheur.', ingredients: ['Tomates', 'Concombre', 'Olives', 'Oignon rouge', 'Huile d’olive'], steps: ['Laver et découper les légumes.', 'Mélanger tous les ingrédients.', 'Assaisonner juste avant de servir.'] },
-  { id: 4, title: 'Pancakes moelleux du dimanche', category: 'Petit-déjeuner', time: 20, difficulty: 'Facile', rating: 4.8, reviews: 286, image: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=900&q=85', description: 'Des pancakes épais et tout doux pour bien commencer la journée.', ingredients: ['Farine', 'Lait', 'Œufs', 'Levure chimique', 'Sucre'], steps: ['Mélanger les ingrédients secs puis les liquides.', 'Laisser reposer quelques minutes.', 'Cuire les pancakes dans une poêle chaude.'] },
-  { id: 5, title: 'Poulet rôti et pommes de terre', category: 'Plats', time: 90, difficulty: 'Facile', rating: 4.8, reviews: 196, image: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=900&q=85', description: 'Un classique familial croustillant à l’extérieur et tendre à l’intérieur.', ingredients: ['Poulet entier', 'Pommes de terre', 'Ail', 'Thym', 'Huile d’olive'], steps: ['Préchauffer le four.', 'Assaisonner le poulet et répartir les pommes de terre.', 'Rôtir en arrosant régulièrement.'] },
-  { id: 6, title: 'Cookies aux pépites de chocolat', category: 'Desserts', time: 30, difficulty: 'Facile', rating: 4.9, reviews: 413, image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=900&q=85', description: 'Croustillants sur les bords, tendres au milieu : le goûter parfait.', ingredients: ['Farine', 'Beurre', 'Cassonade', 'Œuf', 'Pépites de chocolat'], steps: ['Crémer le beurre et le sucre.', 'Ajouter les autres ingrédients.', 'Former les cookies et enfourner.'] },
-  { id: 7, title: 'Pâtes crémeuses aux champignons', category: 'Plats', time: 30, difficulty: 'Facile', rating: 4.6, reviews: 89, image: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=900&q=85', description: 'Une recette réconfortante, rapide et parfaite pour un soir de semaine.', ingredients: ['Pâtes', 'Champignons', 'Crème', 'Ail', 'Persil'], steps: ['Cuire les pâtes.', 'Faire revenir les champignons avec l’ail.', 'Mélanger avec la crème et les pâtes.'] },
-  { id: 8, title: 'Tarte aux pommes de grand-mère', category: 'Desserts', time: 55, difficulty: 'Facile', rating: 4.8, reviews: 231, image: 'https://images.unsplash.com/photo-1562007908-17c67e878c88?w=900&q=85', description: 'Une tarte dorée et parfumée qui sent bon les souvenirs d’enfance.', ingredients: ['Pâte feuilletée', 'Pommes', 'Beurre', 'Sucre', 'Cannelle'], steps: ['Étaler la pâte.', 'Disposer les pommes en fines tranches.', 'Saupoudrer et cuire jusqu’à coloration.'] }
-];
 
 const categories = ['Toutes les recettes', 'Entrées', 'Plats', 'Desserts', 'Petit-déjeuner'];
 const categoryInitials: Record<string, string> = { 'Entrées': 'E', 'Plats': 'P', 'Desserts': 'D', 'Petit-déjeuner': 'PD' };
@@ -68,20 +44,44 @@ function App() {
   const [category, setCategory] = useState('Toutes les recettes');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [selected, setSelected] = useState<Recipe | null>(null);
+  const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
+  const [path, setPath] = useState(window.location.pathname);
+  const navigate = (next: string) => {
+    if (window.location.pathname !== next) window.history.pushState(null, '', next);
+    setPath(next);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const allRecipes = useMemo(() => [...createdRecipes, ...recipes], [createdRecipes]);
+  const detailId = /^\/recettes\/(\d+)$/.exec(path)?.[1];
+  const selectedRecipe = detailId ? allRecipes.find(recipe => recipe.id === Number(detailId)) : undefined;
+  const isHome = path === '/';
+  const isCatalog = path === '/recettes';
+  const isCreate = path === '/recettes/nouvelle';
+  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe;
+  const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[]) => {
+    ingredientQuantities[recipe.id] = ingredients;
+    setCreatedRecipes(current => [recipe, ...current]);
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
-  const filtered = useMemo(() => recipes.filter(recipe => {
+  const filtered = useMemo(() => allRecipes.filter(recipe => {
     const haystack = [recipe.title, recipe.description, recipe.category, ...recipe.ingredients].join(' ').toLocaleLowerCase('fr');
     return haystack.includes(search.trim().toLocaleLowerCase('fr')) && (category === 'Toutes les recettes' || recipe.category === category) && (!onlyFavorites || favorites.includes(recipe.id));
-  }), [search, category, onlyFavorites, favorites]);
+  }), [search, category, onlyFavorites, favorites, allRecipes]);
 
   const visible = (search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
   const toggleFavorite = (id: number) => setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
-  const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' }); };
-  const openFavorites = () => { setOnlyFavorites(true); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' }); };
-  const reset = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
+  const openFavorites = () => { setOnlyFavorites(true); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
+  const reset = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
+  const browse = () => { setSearch(''); setCategory('Toutes les recettes'); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recettes'); };
+  const openRecipe = (recipe: Recipe) => navigate(recipePath(recipe.id));
 
   return <>
     <div className="top-announcement"><span>Les bonnes recettes se partagent, tout simplement</span></div>
