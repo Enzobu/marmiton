@@ -5,11 +5,34 @@ git:
   branches: required
   pull_requests: required
   direct_main_commits: false
-  base_branch: auto
+  base_branch: dev
 testing:
   run_existing_tests: true
 deployment:
-  mode: none
+  mode: production
 metadata:
   source: agent-rules
   configured_with_explicit_approval: true
+
+# Extensions locales Marmiton. Les valeurs ci-dessus restent compatibles avec
+# le profil standard; le configurateur générique ne gère pas ces extensions.
+workflow:
+  feature_base: dev
+  feature_pr_target: dev
+  merge_dev:
+    authorization: preapproved_by_owner
+    require_ci_success: true
+    require_mergeable: true
+    cleanup_merged_branch: true
+  promote_main:
+    source: dev
+    target: main
+    authorization: explicit_per_promotion
+    require_ci_success: true
+  production:
+    only_from: main
+    trigger: push_on_main
+    preproduction: false
+    # Intégration Dokploy activable uniquement après configuration
+    # des secrets, preuve SHA, healthcheck et vérification du rollback.
+    cd_status: not_configured
