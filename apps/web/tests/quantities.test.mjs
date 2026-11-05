@@ -22,7 +22,7 @@ test('Optional ingredient amounts are shown as to taste', () => {
 
 test('All seeded recipes have navigable detail and ingredients', () => {
   for (const recipe of recipes) {
-    assert.match(recipePath(recipe.id), /^\/recettes\/\d+$/);
+    assert.match(recipePath(recipe.id), /^\/recipes\/\d+$/);
     assert.ok(ingredientQuantities[recipe.id].length);
   }
 });
