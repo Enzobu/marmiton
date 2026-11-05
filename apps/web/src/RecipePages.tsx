@@ -100,12 +100,12 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe }: { navigate: 
   const [error, setError] = useState('');
   const [counter, setCounter] = useState(1000);
   useEffect(() => {
-    if (initialRecipe) return;
+    if (initialRecipe || savedDraft) return;
     const timeout = window.setTimeout(() => {
       saveDraft({ title, description, category, difficulty, prep, cook, rest, servings, budget, utensils, image, items, steps });
     }, 450);
     return () => window.clearTimeout(timeout);
-  }, [initialRecipe, title, description, category, difficulty, prep, cook, rest, servings, budget, utensils, image, items, steps]);
+  }, [initialRecipe, savedDraft, title, description, category, difficulty, prep, cook, rest, servings, budget, utensils, image, items, steps]);
 
   const restoreDraft = () => {
     if (!savedDraft) return;
