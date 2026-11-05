@@ -1,0 +1,44 @@
+{
+  "info": {
+    "name": "marmiton",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /health — 200",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 with healthy service', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.deep.equal({ status: 'ok', service: 'marmiton-api' }); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /missing — 404",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/missing"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('404 missing route', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().error).to.eql('Not Found'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

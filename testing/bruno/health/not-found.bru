@@ -1,0 +1,18 @@
+meta {
+  name: GET /missing - 404
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/missing
+  body: none
+  auth: none
+}
+
+tests {
+  test("404 missing route", function() {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().error).to.equal("Not Found");
+  });
+}

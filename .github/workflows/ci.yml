@@ -39,17 +39,35 @@ jobs:
       - name: Offline native API auth scripting tests
         run: node --test agent/tests/test_api_auth.js
 
+  app:
+    name: Validate Marmiton application
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: npm run db:generate
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
   ci-required:
     name: ci-required
     if: always()
-    needs: [rules]
+    needs: [rules, app]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Assert all required jobs succeeded
         env:
           RULES_RESULT: ${{ needs.rules.result }}
+          APP_RESULT: ${{ needs.app.result }}
         run: |
+          test "$APP_RESULT" = success || { echo "Application check did not succeed: $APP_RESULT"; exit 1; }
           test "$RULES_RESULT" = success || {
             echo "Required rules check did not succeed: $RULES_RESULT"
             exit 1
