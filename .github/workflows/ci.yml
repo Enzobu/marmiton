@@ -29,7 +29,7 @@ jobs:
       - name: Validate Skills format and references
         run: python3 agent/scripts/validate_skills.py
       - name: Check Bash syntax
-        run: bash -n agent/scripts/dokploy_deploy.sh agent/scripts/init.sh agent/tests/test_init.sh
+        run: bash -n scripts/dokploy_deploy.sh agent/scripts/dokploy_deploy.sh agent/scripts/init.sh agent/tests/test_init.sh
       - name: Offline deployment regression tests
         run: python3 -m unittest discover -s agent/tests -p 'test_*.py' -v
       - name: Offline Skills tests
