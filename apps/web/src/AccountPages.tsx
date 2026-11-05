@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import type { DemoUser } from './AuthPages';
 import { recipePath, type Recipe } from './recipe-data';
+import { ConfirmDialog } from './UiFeedback';
 import './account.css';
 
 export type Profile = DemoUser & { avatar?: string; bio: string; newsletter: boolean; publicRecipes: boolean };
@@ -60,6 +61,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
   const [publicRecipes, setPublicRecipes] = useState(profile?.publicRecipes ?? true);
   const [notice, setNotice] = useState('');
   const [photoError, setPhotoError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<Recipe | null>(null);
 
   const requireProfile = page !== 'favorites';
   if (!profile && requireProfile) {
@@ -115,10 +117,11 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
           {page !== 'profile' && <>
             <div className="account-section-header"><div><span className="section-kicker">{page === 'favorites' ? 'Ma sélection' : 'Ma cuisine'}</span><h2>{page === 'favorites' ? 'Mes favoris' : 'Mes recettes'}</h2></div>{page === 'my-recipes' && <button className="account-primary" onClick={() => navigate('/recipes/new')}>+ Nouvelle recette</button>}</div>
             <div className="account-controls"><label className="account-search"><span className="sr-only">Rechercher dans mes recettes</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher une recette..."/></label><label className="account-sort">Trier par <select value={sort} onChange={event => setSort(event.target.value as typeof sort)}><option value="recent">Plus récentes</option><option value="name">Nom A-Z</option><option value="time">Plus rapides</option></select></label></div>
-            {filtered.length ? <div className="account-recipe-grid">{filtered.map(recipe => <article className="account-recipe-card" key={recipe.id}><NavLink to={recipePath(recipe.id)} navigate={navigate}><img src={recipe.image} loading="lazy" alt={recipe.title}/></NavLink><div className="account-recipe-body"><span className="card-category">{recipe.category}</span><h3><NavLink to={recipePath(recipe.id)} navigate={navigate}>{recipe.title}</NavLink></h3><p>{recipe.time} min · {recipe.difficulty}</p><div className="account-recipe-actions">{page === 'favorites' ? <button onClick={() => onFavoriteToggle(recipe.id)}>Retirer des favoris</button> : <><button onClick={() => navigate(`/recipes/${recipe.id}/edit`)}>Modifier</button><button className="account-danger" onClick={() => { if (window.confirm(`Supprimer « ${recipe.title} » de tes recettes de démonstration ?`)) onDeleteRecipe(recipe.id); }}>Supprimer</button></>}</div></div></article>)}</div> : source.length === 0 ? <EmptyContent kind={page} navigate={navigate}/> : <div className="account-no-results"><h3>Aucune recette ne correspond</h3><p>Essaie d'autres mots-clés.</p><button onClick={() => setQuery('')}>Effacer la recherche</button></div>}
+            {filtered.length ? <div className="account-recipe-grid">{filtered.map(recipe => <article className="account-recipe-card" key={recipe.id}><NavLink to={recipePath(recipe.id)} navigate={navigate}><img src={recipe.image} loading="lazy" alt={recipe.title}/></NavLink><div className="account-recipe-body"><span className="card-category">{recipe.category}</span><h3><NavLink to={recipePath(recipe.id)} navigate={navigate}>{recipe.title}</NavLink></h3><p>{recipe.time} min · {recipe.difficulty}</p><div className="account-recipe-actions">{page === 'favorites' ? <button onClick={() => onFavoriteToggle(recipe.id)}>Retirer des favoris</button> : <><button onClick={() => navigate(`/recipes/${recipe.id}/edit`)}>Modifier</button><button className="account-danger" onClick={() => setPendingDelete(recipe)}>Supprimer</button></>}</div></div></article>)}</div> : source.length === 0 ? <EmptyContent kind={page} navigate={navigate}/> : <div className="account-no-results"><h3>Aucune recette ne correspond</h3><p>Essaie d'autres mots-clés.</p><button onClick={() => setQuery('')}>Effacer la recherche</button></div>}
           </>}
         </section>
       </div>
     </div>
+  {pendingDelete && <ConfirmDialog title="Supprimer cette recette ?" description={`« ${pendingDelete.title} » sera supprimée de tes créations de démonstration. Cette action est irréversible pour la session.`} confirmLabel="Supprimer la recette" destructive onCancel={() => setPendingDelete(null)} onConfirm={() => { onDeleteRecipe(pendingDelete.id); setPendingDelete(null); }}/>}
   </main>;
 }
