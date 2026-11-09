@@ -122,3 +122,50 @@ html[data-theme="dark"] .mobile-navigation button[aria-current="page"]{color:var
 html[data-theme="dark"] .profile-dropdown button.profile-logout{color:#ffaaa0}
 html[data-theme="dark"] .profile-dropdown button.profile-logout:hover,
 html[data-theme="dark"] .profile-dropdown button.profile-logout:focus-visible{background:#4a2928;color:#ffc4bc}
+
+/* Unified input surfaces: avoid native light/gray controls inside dark cards. */
+.hero-search input,
+.catalog-search input{background:transparent;color:var(--color-ink)}
+.hero-search input::placeholder,
+.catalog-search input::placeholder{color:var(--color-muted);opacity:1}
+html[data-theme="dark"] :is(.hero-search,.catalog-search){background:var(--color-paper);border:1px solid var(--color-line)}
+html[data-theme="dark"] :is(.hero-search input,.catalog-search input){background:transparent;color:var(--color-ink);border-color:transparent;box-shadow:none}
+html[data-theme="dark"] :is(.hero-search input,.catalog-search input)::placeholder{color:var(--color-muted);opacity:1}
+html[data-theme="dark"] :is(.auth-input-wrap input,.auth-form input:not([type="checkbox"])){background:transparent;color:var(--color-ink)}
+html[data-theme="dark"] :is(.auth-input-wrap,.account-form-grid input,.account-form-grid textarea,.account-search input,.account-sort select,.advanced-search-panel select,.form-field input,.form-field textarea,.form-field select,.recipe-json-panel textarea){border-color:var(--color-line);color:var(--color-ink)}
+html[data-theme="dark"] :is(.account-form-grid input,.account-form-grid textarea,.account-search input,.account-sort select,.advanced-search-panel select){background:var(--color-paper)}
+html[data-theme="dark"] :is(.form-field input,.form-field textarea,.form-field select){background:#1b221c}
+html[data-theme="dark"] :is(.account-form-grid input,.account-form-grid textarea,.account-search input,.form-field input,.form-field textarea,.auth-input-wrap input,.recipe-json-panel textarea)::placeholder{color:var(--color-muted);opacity:1}
+html[data-theme="dark"] .site-header{background:var(--color-paper)}
+
+/* Compact icon-only theme control, matching the supplied three-way toggle. */
+.account-theme-segments{
+  position:relative;display:grid;grid-template-columns:repeat(3,36px);
+  gap:4px;padding:4px;width:max-content;height:44px;
+  border:1px solid var(--color-line);border-radius:12px;
+  background:var(--color-soft);isolation:isolate;
+}
+.account-theme-segments::before{
+  content:'';position:absolute;z-index:0;top:4px;left:4px;
+  width:36px;height:34px;border-radius:9px;
+  background:var(--color-paper);box-shadow:0 2px 8px #0002;
+  transform:translateX(0);transition:transform .22s ease;
+}
+.account-theme-segments[data-selected="system"]::before{transform:translateX(40px)}
+.account-theme-segments[data-selected="dark"]::before{transform:translateX(80px)}
+.account-theme-segments button{
+  position:relative;z-index:1;display:grid;place-items:center;
+  padding:0;width:36px;height:34px;border:0;border-radius:9px;
+  background:transparent;color:var(--color-muted);
+}
+.account-theme-segments button.is-active{background:transparent;box-shadow:none;color:var(--color-ink)}
+.account-theme-segments button:hover{color:var(--color-accent)}
+.account-theme-segments button:focus-visible{outline:2px solid var(--color-accent);outline-offset:1px}
+html[data-theme="dark"] .account-theme-segments{background:#303b31}
+html[data-theme="dark"] .account-theme-segments::before{background:#465345}
+html[data-theme="dark"] .account-theme-segments button.is-active{background:transparent;color:#fff;box-shadow:none}
+@media(max-width:520px){
+  .account-theme-segments{width:max-content;display:grid}
+  .account-theme-segments button{flex:unset}
+}
+@media(prefers-reduced-motion:reduce){.account-theme-segments::before{transition:none}}

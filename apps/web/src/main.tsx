@@ -121,6 +121,9 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   useEffect(() => {
+    if (path === '/favorites' && !demoUser) navigate('/login');
+  }, [path, demoUser]);
+  useEffect(() => {
     const onPop = () => {
       setProfileOpen(false);
       setPath(window.location.pathname);
@@ -182,12 +185,13 @@ function App() {
 
   const visible = (isCatalog || search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
   const toggleFavorite = (id: number) => {
+    if (!demoUser) { navigate('/login'); return; }
     const alreadySaved = favorites.includes(id);
     setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
     notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
   };
   const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
-  const openFavorites = () => { setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); setMenuOpen(false); navigate('/favorites'); };
+  const openFavorites = () => { setMenuOpen(false); if (!demoUser) { navigate('/login'); return; } setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); navigate('/favorites'); };
   const reset = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
   const browse = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
   const openRecipe = (recipe: Recipe) => navigate(recipePath(recipe.id));
@@ -196,7 +200,7 @@ function App() {
     <div className="top-announcement"><span>Les bonnes recettes se partagent, tout simplement</span></div>
     <header className="site-header">
       <div className="header-inner">
-        <button className="logo" onClick={reset} aria-label="Accueil Les Petits Plats"><span className="logo-mark"><Icon name="chef" size={25}/></span><span>les petits<span className="logo-accent">plats.</span></span></button>
+        <button className="logo" onClick={reset} aria-label="Accueil Les Petits Plats"><span className="logo-mark"><Icon name="chef" size={25}/></span><span>Les petits<span className="logo-accent">plats.</span></span></button>
         <nav className="desktop-navigation" aria-label="Navigation principale">
           <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
         </nav>
@@ -210,7 +214,7 @@ function App() {
             <button onClick={() => { setProfileOpen(false); navigate('/my-recipes'); }}>Mes recettes</button>
             <button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button>
             <button onClick={() => { setProfileOpen(false); navigate('/recipes/new'); }}>Créer une recette</button>
-            <button className="profile-logout" onClick={() => { setDemoUser(null); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
+            <button className="profile-logout" onClick={() => { setDemoUser(null); setFavorites([]); setOnlyFavorites(false); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
             <span className="profile-demo-tag">Compte de démonstration, non persistant</span>
           </div>}
         </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
@@ -248,10 +252,10 @@ function App() {
     {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); notify('Compte de démonstration activé.', 'info'); }}/>}
-    {accountRoute && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode} themePreference={themePreference} onThemeChange={updateThemePreference}/>}
+    {accountRoute && (accountRoute !== 'favorites' || demoUser) && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode} themePreference={themePreference} onThemeChange={updateThemePreference}/>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}
     <ToastRegion toast={toast} onDismiss={() => setToast(null)}/>
-    <footer className="site-footer"><div><span className="footer-brand">les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
+    <footer className="site-footer"><div><span className="footer-brand">Les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
 
   </>;
 }
