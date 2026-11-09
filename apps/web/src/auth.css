@@ -69,3 +69,8 @@
 @media(max-width:760px){.auth-page{padding:24px 16px 54px}.auth-layout{display:block;max-width:520px;min-height:0}.auth-card{padding:28px 24px 35px}.auth-story{display:none}.profile-trigger>span:last-child{display:none}.profile-trigger{padding:5px}.profile-dropdown{right:0}}
 @media(max-width:420px){.auth-card{padding:26px 18px}.auth-name-grid{grid-template-columns:1fr}.auth-password-rules{grid-template-columns:1fr}.auth-card h1{font-size:29px}.profile-avatar{width:31px;height:31px}}
 @media(prefers-reduced-motion:reduce){.auth-input-wrap{transition:none}}
+
+/* Destructive account action, visible in light and dark appearance. */
+.profile-dropdown button.profile-logout{color:#b43c37;font-weight:800}
+.profile-dropdown button.profile-logout:hover,
+.profile-dropdown button.profile-logout:focus-visible{background:#fff0ee;color:#992d28}
