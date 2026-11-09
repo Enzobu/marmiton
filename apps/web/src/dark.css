@@ -113,3 +113,12 @@ html[data-theme="dark"] .recipe-json-feedback{background:#25472e;color:#b8eac2}
 html[data-theme="dark"] .recipe-json-tabs{border-color:var(--color-line)}
 html[data-theme="dark"] .recipe-json-overlay{background:#070b09d9}
 @media(prefers-reduced-motion:reduce){.account-theme-segments button{transition:none}}
+
+/* Active navigation and logout remain meaningful in dark mode. */
+html[data-theme="dark"] .desktop-navigation button.nav-active,
+html[data-theme="dark"] .mobile-navigation button.nav-active,
+html[data-theme="dark"] .desktop-navigation button[aria-current="page"],
+html[data-theme="dark"] .mobile-navigation button[aria-current="page"]{color:var(--color-accent)}
+html[data-theme="dark"] .profile-dropdown button.profile-logout{color:#ffaaa0}
+html[data-theme="dark"] .profile-dropdown button.profile-logout:hover,
+html[data-theme="dark"] .profile-dropdown button.profile-logout:focus-visible{background:#4a2928;color:#ffc4bc}
