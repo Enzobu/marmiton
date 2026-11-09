@@ -68,6 +68,24 @@ function App() {
   }, [toast]);
   const [demoUser, setDemoUser] = useState<Profile | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handleOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileOpen(false);
+    };
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [profileOpen]);
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
     try { const stored = window.localStorage.getItem('petitsplats.theme'); return stored === 'light' || stored === 'dark' ? stored : 'system'; }
     catch { return 'system'; }
@@ -97,6 +115,7 @@ function App() {
   };
   const [path, setPath] = useState(window.location.pathname);
   const navigate = (next: string) => {
+    setProfileOpen(false);
     if (window.location.pathname !== next) window.history.pushState(null, '', next);
     setPath(next);
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -127,6 +146,11 @@ function App() {
   const accountRoute = ({ '/profile': 'profile', '/my-recipes': 'my-recipes', '/favorites': 'favorites' } as Record<string, AccountRoute>)[path];
   const selectedRecipe = detailId ? allRecipes.find(recipe => recipe.id === Number(detailId)) : undefined;
   const isHome = path === '/';
+  const activeNav = path === '/' ? 'home'
+    : path === '/favorites' ? 'favorites'
+    : path === '/recipes/new' || /^\/recipes\/\d+\/edit$/.test(path) ? 'create'
+    : path === '/recipes' || /^\/recipes\/\d+$/.test(path) ? 'recipes'
+    : null;
   const isCatalog = path === '/recipes';
   const isCreate = path === '/recipes/new';
   const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
@@ -173,9 +197,9 @@ function App() {
       <div className="header-inner">
         <button className="logo" onClick={reset} aria-label="Accueil Les Petits Plats"><span className="logo-mark"><Icon name="chef" size={25}/></span><span>les petits<span className="logo-accent">plats.</span></span></button>
         <nav className="desktop-navigation" aria-label="Navigation principale">
-          <button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
+          <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
         </nav>
-        <div className="header-actions"><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap">
+        <div className="header-actions"><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap" ref={profileMenuRef}>
           <button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
             <span className="profile-avatar">{demoUser.avatar ? <img src={demoUser.avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (demoUser.firstName.charAt(0) + demoUser.lastName.charAt(0)).toUpperCase()}</span><span>{demoUser.firstName}</span>
           </button>
@@ -185,12 +209,12 @@ function App() {
             <button onClick={() => { setProfileOpen(false); navigate('/my-recipes'); }}>Mes recettes</button>
             <button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button>
             <button onClick={() => { setProfileOpen(false); navigate('/recipes/new'); }}>Créer une recette</button>
-            <button onClick={() => { setDemoUser(null); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
+            <button className="profile-logout" onClick={() => { setDemoUser(null); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
             <span className="profile-demo-tag">Compte de démonstration, non persistant</span>
           </div>}
         </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
       </div>
-      {menuOpen && <nav className="mobile-navigation" aria-label="Navigation mobile"><button onClick={reset}>Accueil</button><button onClick={browse}>Recettes</button><button onClick={openFavorites}>Mes favoris</button><button onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button></nav>}
+      {menuOpen && <nav className="mobile-navigation" aria-label="Navigation mobile"><button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button></nav>}
     </header>
     {(isHome || isCatalog) && <main>
       {isHome && <>
