@@ -122,6 +122,7 @@ function App() {
   };
   useEffect(() => {
     const onPop = () => {
+      setProfileOpen(false);
       setPath(window.location.pathname);
       if (window.location.pathname === '/recipes') {
         const parsed = parseCatalogQuery(window.location.search);
