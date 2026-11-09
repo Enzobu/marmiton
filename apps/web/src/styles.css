@@ -31,3 +31,11 @@
 /* Advanced catalog filters */
 .advanced-search-panel{display:flex;flex-wrap:wrap;align-items:end;gap:12px;background:#fffaf5;border:1px solid var(--color-line);padding:17px 19px;border-radius:11px;margin:-5px 0 27px}.advanced-search-panel label{display:flex;flex:1 1 135px;min-width:115px;flex-direction:column;gap:7px;font-size:11px;font-weight:800;color:var(--color-ink)}.advanced-search-panel select{height:42px;width:100%;padding:0 33px 0 12px;border:1px solid #e7ddd4;border-radius:8px;background:var(--color-paper);color:var(--color-ink);font-size:12px;font-weight:600;cursor:pointer}.advanced-search-panel select:hover,.advanced-search-panel select:focus-visible{border-color:var(--color-accent)}.advanced-reset{border:1px solid #eed1bb;color:var(--color-accent);font-size:11px;font-weight:800;border-radius:8px;background:var(--color-paper);padding:12px;min-height:42px}.advanced-reset:hover{background:var(--color-soft)}.catalog-search input[type=search]{appearance:none}
 @media(max-width:760px){.advanced-search-panel{padding:13px;gap:11px}.advanced-search-panel label{flex-basis:calc(50% - 11px)}.advanced-reset{width:100%}}
+
+/* Current section in the main navigation (desktop and mobile). */
+.desktop-navigation button.nav-active,
+.mobile-navigation button.nav-active,
+.desktop-navigation button[aria-current="page"],
+.mobile-navigation button[aria-current="page"]{
+  color:var(--color-accent);
+}
