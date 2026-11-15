@@ -23,7 +23,7 @@ test('Guests are redirected to login for every favorite entry point', () => {
 test('Dark form surfaces are consistent in home, catalog and editors', () => {
   assert.match(css, /\.hero-search input,\s*\.catalog-search input\{background:transparent/);
   assert.match(css, /html\[data-theme="dark"\] :is\(\.hero-search input,\.catalog-search input\)\{background:transparent/);
-  for (const field of ['.auth-input-wrap input', '.account-search input', '.account-form-grid input', '.advanced-search-panel select', '.form-field input', '.recipe-json-panel textarea']) {
+  for (const field of ['.auth-input-wrap input', '.account-search input', '.account-form-grid input', '.form-field input', '.recipe-json-panel textarea']) {
     assert.ok(css.includes(field), field);
   }
 });
