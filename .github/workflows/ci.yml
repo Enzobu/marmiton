@@ -80,7 +80,7 @@ jobs:
       - run: npm test
       - name: Verify Postman and Bruno collections against MariaDB
         env:
-          TEST_REVISION: 1111111111111111111111111111111111111111
+          TEST_REVISION: "1111111111111111111111111111111111111111"
         run: |
           export UPLOADS_DIRECTORY="$(mktemp -d)"
           node --input-type=module -e 'import { buildApp } from "./apps/api/dist/app.js"; await buildApp({ revision: process.env.TEST_REVISION }).listen({ host: "127.0.0.1", port: 3001 });' &
