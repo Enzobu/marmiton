@@ -1,3 +1,4 @@
+import { PantrySearch } from './PantrySearch';
 import { WeeklyMenu } from './WeeklyMenu';
 import type { PlannedMeal } from './weekly-menu';
 import { ShoppingList } from './ShoppingList';
@@ -263,9 +264,10 @@ function App() {
   const activeNav = path === '/' ? 'home'
     : path === '/favorites' ? 'favorites'
     : path === '/recipes/new' || editId ? 'create'
-    : path === '/recipes' || detailId ? 'recipes'
+    : path === '/recipes' || detailId || path === '/pantry-search' ? 'recipes'
     : null;
   const isCatalog = path === '/recipes';
+  const isPantrySearch = path === '/pantry-search';
   const isCreate = path === '/recipes/new';
   const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
   function invalidateSession() {
@@ -366,7 +368,7 @@ function App() {
   const selectedRecipe = localRecipe ?? currentDetail?.recipe;
   const detailLoading = Boolean(detailId?.includes('-') && !localRecipe && !currentDetail);
   const editorialLoading = needsOwnedRecipes && (!!accessToken && (ownedRecipesPending || (ownedRecipesLoaded !== accessToken && !ownedRecipesError)));
-  const isNotFound = !isHome && !isCatalog && !isCreate && !isShoppingList && !isWeeklyMenu && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));
+  const isNotFound = !isHome && !isCatalog && !isCreate && !isShoppingList && !isWeeklyMenu && !isPantrySearch && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));
   const visible = useMemo(() => catalog?.data?.items.map(fromApiRecipe) ?? [], [catalog]);
 
   const total = currentCatalog?.data?.total ?? 0;
@@ -466,7 +468,7 @@ function App() {
         </div>
       </section>
       <section className="categories-section section-container" aria-labelledby="categories-title"><div className="section-heading"><div><span className="section-kicker">Catalogue</span><h2 id="categories-title">Explorer par catégorie</h2></div><p>Entrées, plats, desserts et petits-déjeuners.</p></div><div className="category-grid">{categories.slice(1).map(item => <button key={item} className={`category-tile ${category === item && !onlyFavorites ? 'selected' : ''}`} onClick={() => chooseCategory(item)}><span className="category-emoji" aria-hidden="true">{categoryInitials[item]}</span><span>{item}</span><Icon name="arrow" size={17}/></button>)}</div></section></>}
-      {isCatalog && <section className="catalog-intro"><span className="section-kicker">Catalogue</span><h1>Toutes les recettes</h1><p>Filtrez les recettes par catégorie, difficulté, durée ou budget.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Rechercher une recette</label><input id="catalog-search" placeholder="Nom de recette ou ingrédient" value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form></section>}
+      {isCatalog && <section className="catalog-intro"><span className="section-kicker">Catalogue</span><h1>Toutes les recettes</h1><p>Filtrez les recettes par catégorie, difficulté, durée ou budget.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Rechercher une recette</label><input id="catalog-search" placeholder="Nom de recette ou ingrédient" value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form><a className="planning-link" href="/pantry-search" onClick={event => { event.preventDefault(); navigate('/pantry-search'); }}>Rechercher avec mes ingrédients</a></section>}
       {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Catalogue'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Recettes à découvrir' : category}</h2></div><span className="recipe-count">{total} recette{total > 1 ? 's' : ''}</span></div>
         <div className="filter-bar"><div className="filter-chips" role="group" aria-label="Filtrer les recettes"><button className={category === 'Toutes les recettes' && !onlyFavorites ? 'active' : ''} onClick={() => { setOnlyFavorites(false); setCategory('Toutes les recettes'); }}>Tout voir</button>{categories.slice(1).map(item => <button key={item} className={!onlyFavorites && category === item ? 'active' : ''} onClick={() => { setCategory(item); setOnlyFavorites(false); }}>{item}</button>)}<button className={onlyFavorites ? 'active' : ''} onClick={openFavorites}><Icon name="heart" size={14}/>Favoris</button></div><span className="filter-caption"><Icon name="sliders" size={17}/> Catégories de recettes</span></div>
         {isCatalog && <div className="advanced-search-panel" role="group" aria-label="Filtres avancés">
@@ -489,7 +491,8 @@ function App() {
     {(isShoppingList || isWeeklyMenu) && sessionError && <p className="section-container" role="alert">Impossible de vérifier la connexion. Rechargez la page.</p>}
     {isShoppingList && profile && <ShoppingList key={profile.email} email={profile.email}/>}
     {isWeeklyMenu && profile && <WeeklyMenu key={profile.email} email={profile.email} onAddToShopping={addWeeklyMenuToShopping}/>}
-    {selectedRecipe && <RecipeDetail onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => addToShopping(selectedRecipe, servings)} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
+    {isPantrySearch && <PantrySearch/>}
+    {selectedRecipe && <RecipeDetail notesEmail={profile?.email} onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => addToShopping(selectedRecipe, servings)} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} signedIn={Boolean(profile)} sessionPending={sessionPending} onReset={() => { invalidateSession(); navigate('/login'); notify('Mot de passe réinitialisé.'); }} onLogin={({ profile: user, accessToken: token }, remember) => {
