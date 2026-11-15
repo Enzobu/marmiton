@@ -34,7 +34,7 @@ export function fromApiRecipe({ image, badge, ...recipe }: ApiRecipe): Recipe {
 }
 
 export async function privateImageUrl(url: string, token: string, signal: AbortSignal) {
-  const response = await fetch(url, { headers: authHeaders(token), signal });
+  const response = await fetch(url.startsWith('/me/avatar/') ? apiBase + url : url, { headers: authHeaders(token), signal });
   if (!response.ok) throw new ApiError(response.status);
   return URL.createObjectURL(await response.blob());
 }

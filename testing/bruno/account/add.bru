@@ -1,0 +1,23 @@
+meta {
+  name: PUT /me/favorites/00000000-0000-4000-8000-000000000001 (add)
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

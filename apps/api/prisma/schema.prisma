@@ -29,6 +29,7 @@ model Recipe {
   updatedAt    DateTime           @updatedAt
   ingredients  RecipeIngredient[]
   steps        RecipeStep[]
+  favorites    Favorite[]
 
   @@index([isPublic, category, totalMinutes])
 }
@@ -65,6 +66,7 @@ model Owner {
   publicRecipes Boolean        @default(true)
   avatar       String?         @db.VarChar(255)
   sessions     Session[]
+  favorites    Favorite[]
   resets       PasswordReset[]
 }
 
@@ -84,4 +86,15 @@ model PasswordReset {
   owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId, expiresAt])
+}
+
+model Favorite {
+  ownerId   Int
+  recipeId  String   @db.Char(36)
+  createdAt DateTime @default(now())
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, recipeId])
+  @@index([ownerId, createdAt])
 }

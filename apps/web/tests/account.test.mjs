@@ -18,11 +18,11 @@ test('All navigable frontend paths use English segments', () => {
   }
 });
 
-test('Account pages provide editable profile and custom photo in demo', () => {
+test('Account pages provide editable profile and custom photo', () => {
   assert.match(account, /onProfileChange/);
   assert.match(account, /type="file"/);
   assert.match(account, /image\/jpeg/);
-  assert.match(account, /2_000_000/);
+  assert.match(account, /validateRecipeImage\(file\)/);
   assert.match(account, /onPhoto/);
   assert.match(account, /account-preferences/);
 });
