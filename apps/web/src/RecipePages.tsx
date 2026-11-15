@@ -1,3 +1,4 @@
+import { RecipeNotes } from './RecipeNotes';
 import { MealDateForm } from './WeeklyMenu';
 import { CookingMode } from './CookingMode';
 import { SelectField } from './SelectField';
@@ -49,7 +50,7 @@ function IngredientPicture({ icon }: { icon: Ingredient['icon'] }) {
   </span>;
 }
 
-export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping, onPlanMeal }: { recipe: Recipe; addToShopping: (servings: number) => void; onPlanMeal: (servings: number, date: string) => boolean } & SharedProps) {
+export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping, onPlanMeal, notesEmail }: { recipe: Recipe; notesEmail?: string; addToShopping: (servings: number) => void; onPlanMeal: (servings: number, date: string) => boolean } & SharedProps) {
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
@@ -79,6 +80,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
           <div className="detail-tip"><span className="tip-icon"><Glyph name="chef" size={24}/></span><div><strong>Conseil de préparation</strong><p>Préparez les ingrédients et les ustensiles avant de commencer.</p></div></div>
         </div>
       </div>
+      {notesEmail && <RecipeNotes key={notesEmail} email={notesEmail} recipeId={recipe.id}/>}
       <div className="detail-bottom-nav"><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}><Glyph name="back"/>Retour aux recettes</a></div>
     </div>
   </main>;

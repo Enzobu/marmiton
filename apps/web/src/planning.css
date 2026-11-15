@@ -20,3 +20,9 @@
 .planning-date input{padding:10px;background:var(--color-page);color:var(--color-ink);border:1px solid var(--color-line);border-radius:8px}
 .planning-actions .planning-date~button{align-self:end}
 .planning-actions button:disabled{opacity:.55;cursor:default}
+.planning-input{margin-block:16px;max-width:600px}
+.planning-input button{justify-self:start;align-self:flex-start}
+.planning-input button:disabled{opacity:.55;cursor:default}
+.recipe-notes{margin-block:24px}
+.planning-list .planning-link{overflow-wrap:anywhere}
+@media print{.recipe-notes{display:none}}
