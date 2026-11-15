@@ -1,0 +1,14 @@
+.cooking-mode{width:min(640px,calc(100% - 24px));max-height:calc(100dvh - 24px);margin:auto;padding:clamp(18px,5vw,36px);background:var(--color-paper);color:var(--color-ink);border:1px solid var(--color-line);border-radius:14px;overflow:auto}
+.cooking-mode::backdrop{background:#000a}
+.cooking-mode header,.cooking-mode nav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.cooking-recipe{margin-block:8px 24px;color:var(--color-muted)}
+.cooking-mode h3{color:var(--color-accent);font-size:15px}
+.cooking-instruction{font-size:clamp(20px,4vw,28px);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;margin-block:12px 24px}
+.cooking-mode details,.cooking-timer{margin-top:20px;border-top:1px solid var(--color-line);padding-top:16px}
+.cooking-mode summary{cursor:pointer;font-weight:700}
+.cooking-mode details ul{padding-left:22px;line-height:1.8}
+.cooking-timer{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.cooking-timer label{display:grid;gap:7px;font-weight:650}
+.cooking-timer input{padding:10px;color:var(--color-ink);background:var(--color-page);border:1px solid var(--color-line);border-radius:8px;max-width:9rem}
+.cooking-timer [role="timer"]{font-size:25px;font-variant-numeric:tabular-nums}
+.cooking-mode button:disabled{opacity:.55;cursor:default}
