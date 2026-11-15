@@ -1,0 +1,23 @@
+meta {
+  name: POST /auth/forgot-password (authenticated-reset-no-smtp)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/auth/forgot-password
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 503", () => expect(res.getStatus()).to.equal(503));
+}

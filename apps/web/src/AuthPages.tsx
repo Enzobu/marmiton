@@ -4,7 +4,7 @@ import type { Profile } from './AccountPages';
 import './auth.css';
 
 type LoginResult = { accessToken: string; profile: Profile };
-type AuthProps = { page: 'login' | 'forgot' | 'reset'; navigate: (path: string) => void; onLogin: (session: LoginResult, remember: boolean) => void };
+type AuthProps = { page: 'login' | 'forgot' | 'reset'; navigate: (path: string) => void; onLogin: (session: LoginResult, remember: boolean) => void; onReset: () => void };
 
 export const AUTH_ROUTES = {
   login: '/login',
@@ -47,7 +47,7 @@ function Icon({ name, size = 19 }: { name: IconName; size?: number }) {
 function RouteLink({ to, children, navigate, className }: { to: string; children: React.ReactNode; navigate: AuthProps['navigate']; className?: string }) {
   return <a href={to} className={className} onClick={event => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(to); } }}>{children}</a>;
 }
-export function PasswordField({ id, label, value, onChange, autoComplete, placeholder, required = true }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; placeholder?: string; required?: boolean }) {
+function PasswordField({ id, label, value, onChange, autoComplete, placeholder, required = true }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; placeholder?: string; required?: boolean }) {
   const [show, setShow] = useState(false);
   return <div className="auth-field"><label htmlFor={id}>{label}</label><div className="auth-input-wrap"><Icon name="lock"/><input id={id} type={show ? 'text' : 'password'} value={value} maxLength={128} autoComplete={autoComplete} onChange={event => onChange(event.target.value)} placeholder={placeholder} required={required}/><button type="button" className="auth-reveal" aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={show} onClick={() => setShow(previous => !previous)}><Icon name={show ? 'eye-off' : 'eye'}/></button></div></div>;
 }
@@ -55,7 +55,7 @@ function EmailField({ value, onChange, autoComplete = 'email' }: { value: string
   return <div className="auth-field"><label htmlFor="auth-email">Adresse e-mail</label><div className="auth-input-wrap"><Icon name="mail"/><input id="auth-email" type="email" required maxLength={254} autoComplete={autoComplete} placeholder="exemple@domaine.fr" value={value} onChange={event => onChange(event.target.value)}/></div></div>;
 }
 
-export function AuthPage({ page, navigate, onLogin }: AuthProps) {
+export function AuthPage({ page, navigate, onLogin, onReset }: AuthProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -64,6 +64,8 @@ export function AuthPage({ page, navigate, onLogin }: AuthProps) {
   const [feedbackType, setFeedbackType] = useState<'info' | 'error'>('info');
   const [busy, setBusy] = useState(false);
   const checks = passwordChecks(password);
+  const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+  const hasResetToken = Boolean(token && /^[A-Za-z0-9_-]{43}$/.test(token));
 
   const inform = (value: string, type: 'info' | 'error' = 'info') => { setFeedback(value); setFeedbackType(type); };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -73,8 +75,7 @@ export function AuthPage({ page, navigate, onLogin }: AuthProps) {
       inform('Vérifie les critères du mot de passe et sa confirmation.', 'error');
       return;
     }
-    const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
-    if (page === 'reset' && !token) {
+    if (page === 'reset' && !hasResetToken) {
       inform('Ce lien est invalide. Demande un nouveau lien.', 'error');
       return;
     }
@@ -88,7 +89,7 @@ export function AuthPage({ page, navigate, onLogin }: AuthProps) {
       });
       if (page === 'login') onLogin(result, remember);
       if (page === 'forgot') inform('Si l’adresse est associée à ton compte, tu recevras un lien de réinitialisation.');
-      if (page === 'reset') navigate('/login');
+      if (page === 'reset') onReset();
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 0;
       inform(status === 429 ? 'Trop de tentatives. Réessaie dans une minute.'
@@ -107,7 +108,9 @@ export function AuthPage({ page, navigate, onLogin }: AuthProps) {
         <h1 id="auth-title">{titleByPage[page]}</h1>
         <p className="auth-lead">{page === 'login' ? 'Connecte-toi pour retrouver tes bonnes idées et tes recettes préférées.' : page === 'forgot' ? 'Renseigne ton adresse e-mail pour recevoir un lien de réinitialisation.' : 'Choisis un mot de passe solide pour protéger ton compte.'}</p>
 
-        <form className="auth-form" onSubmit={submit}>
+        {page === 'reset' && !hasResetToken ? <div className="auth-alert" role="status">
+          Ouvre le lien de réinitialisation reçu par e-mail. <RouteLink to="/forgot-password" navigate={navigate}>Demander un lien</RouteLink>
+        </div> : <form className="auth-form" onSubmit={submit}>
           {(page === 'login' || page === 'forgot') && <EmailField value={email} onChange={setEmail}/>}
           {(page === 'login' || page === 'reset') && <PasswordField id="auth-password" label={page === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'} value={password} onChange={setPassword} autoComplete={page === 'login' ? 'current-password' : 'new-password'} placeholder={page === 'login' ? 'Ton mot de passe' : 'Au moins 12 caractères'}/>}
           {(page === 'reset') && <>
@@ -119,7 +122,7 @@ export function AuthPage({ page, navigate, onLogin }: AuthProps) {
           {page === 'login' && <div className="auth-form-options"><label className="auth-checkbox"><input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)}/>Se souvenir de moi</label><RouteLink navigate={navigate} to="/forgot-password">Mot de passe oublié ?</RouteLink></div>}
           {feedback && <div className={`auth-alert ${feedbackType === 'error' ? 'auth-alert-error' : ''}`} role={feedbackType === 'error' ? 'alert' : 'status'}>{feedback}</div>}
           <button className="auth-primary" type="submit" disabled={busy}>{page === 'login' ? 'Se connecter' : page === 'forgot' ? 'Demander un lien' : 'Modifier mon mot de passe'}<Icon name="arrow" size={18}/></button>
-        </form>
+        </form>}
         {page !== 'login' && <div className="auth-bottom"><RouteLink to="/login" navigate={navigate}>Retour à la connexion</RouteLink></div>}
       </section>
       <aside className="auth-story" aria-label="Inspiration cuisine">

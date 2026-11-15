@@ -1,11 +1,11 @@
 meta {
-  name: POST /auth/change-password (invalid)
+  name: POST /auth/forgot-password (authenticated-reset-other-email)
   type: http
-  seq: 3
+  seq: 12
 }
 
 post {
-  url: {{baseUrl}}/auth/change-password
+  url: {{baseUrl}}/auth/forgot-password
   body: json
   auth: none
 }
@@ -16,8 +16,7 @@ headers {
 
 body:json {
   {
-    "currentPassword": "Fixture-Password42",
-    "newPassword": "weak"
+    "email": "other@example.invalid"
   }
 }
 

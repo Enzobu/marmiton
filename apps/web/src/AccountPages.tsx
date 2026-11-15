@@ -129,7 +129,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
               {notice && <p role="status" className="account-success">{notice}</p>}
               <div className="account-form-actions"><button className="account-primary" type="submit" disabled={saving}>Enregistrer les modifications</button></div>
             </form>
-            <AccountPassword token={token} navigate={navigate}/>
+            <AccountPassword token={token} email={profile.email} navigate={navigate}/>
           </>}
           {page !== 'profile' && <>
             <div className="account-section-header"><div><span className="section-kicker">{page === 'favorites' ? 'Ma sélection' : 'Ma cuisine'}</span><h2>{page === 'favorites' ? 'Mes favoris' : 'Mes recettes'}</h2></div>{page === 'my-recipes' && <button className="account-primary" onClick={() => navigate('/recipes/new')}>+ Nouvelle recette</button>}</div>
