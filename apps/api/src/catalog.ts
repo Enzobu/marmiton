@@ -2,11 +2,12 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireSession } from './auth.js';
+import { RECIPE_DIFFICULTIES } from './recipe-json.js';
 
 const querySchema = z.object({
   q: z.string().trim().max(150).optional(),
   category: z.enum(['Entrées', 'Plats', 'Desserts', 'Petit-déjeuner']).optional(),
-  difficulty: z.enum(['Facile', 'Moyen']).optional(),
+  difficulty: z.enum(RECIPE_DIFFICULTIES).optional(),
   budget: z.enum(['Bon marché', 'Moyen', 'Assez cher']).optional(),
   maxTime: z.coerce.number().int().min(1).max(1440).optional(),
   sort: z.enum(['relevance', 'popular', 'rating', 'prep', 'time']).default('relevance'),

@@ -42,3 +42,7 @@ test('UI exposes import-export actions and remembers developer switch', () => {
   assert.match(account, /Mode développeur/);
   assert.match(root, /localStorage\.setItem\('petitsplats.developerMode'/);
 });
+
+test('Difficult recipes are accepted in JSON imports', () => {
+  assert.equal(validateRecipeJson({ ...RECIPE_JSON_EXAMPLE, difficulty: 'Difficile' }).ok, true);
+});

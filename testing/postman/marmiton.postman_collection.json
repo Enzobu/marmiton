@@ -704,7 +704,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette modifi\\u00e9e\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette modifi\\u00e9e\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Difficile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
             }
           },
           "event": [
@@ -714,7 +714,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.test(\"Edited title\", () => pm.expect(pm.response.json().title).to.eql(\"Recette modifiée\"));"
+                  "pm.test(\"Edited title\", () => pm.expect(pm.response.json().title).to.eql(\"Recette modifiée\"));",
+                  "pm.test(\"Updated difficulty\", () => pm.expect(pm.response.json().difficulty).to.eql(\"Difficile\"));"
                 ]
               }
             }

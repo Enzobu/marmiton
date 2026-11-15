@@ -1,10 +1,12 @@
+import type { RecipeDifficulty } from './recipe-json';
+
 export type Recipe = {
   id: string | number;
   title: string;
   image: string;
   category: string;
   time: number;
-  difficulty: 'Facile' | 'Moyen';
+  difficulty: RecipeDifficulty;
   rating: number;
   reviews: number;
   description: string;

@@ -1,11 +1,18 @@
 export const RECIPE_JSON_VERSION = 1 as const;
 
+export const RECIPE_DIFFICULTIES = ['Facile', 'Moyen', 'Difficile'] as const;
+export type RecipeDifficulty = typeof RECIPE_DIFFICULTIES[number];
+
+export function isRecipeDifficulty(value: unknown): value is RecipeDifficulty {
+  return RECIPE_DIFFICULTIES.some(difficulty => difficulty === value);
+}
+
 export type RecipeJson = {
   schemaVersion: typeof RECIPE_JSON_VERSION;
   title: string;
   description: string;
   category: 'Entrées' | 'Plats' | 'Desserts' | 'Petit-déjeuner';
-  difficulty: 'Facile' | 'Moyen';
+  difficulty: RecipeDifficulty;
   servings: number;
   times: { preparation: number; cooking: number; rest: number };
   budget: 'Bon marché' | 'Moyen' | 'Assez cher';
@@ -64,7 +71,7 @@ export function validateRecipeJson(value: unknown): RecipeJsonValidation {
     if (typeof result !== 'string') return { ok: false, error: result.error };
   }
   if (!['Entrées','Plats','Desserts','Petit-déjeuner'].includes(value.category as string)) return { ok: false, error: 'category : catégorie inconnue.' };
-  if (!['Facile','Moyen'].includes(value.difficulty as string)) return { ok: false, error: 'difficulty : valeur attendue Facile ou Moyen.' };
+  if (!isRecipeDifficulty(value.difficulty)) return { ok: false, error: `difficulty : valeur attendue parmi ${RECIPE_DIFFICULTIES.join(', ')}.` };
   const servingsError = numberField(value.servings, 'servings', 1, 12, true);
   if (servingsError) return { ok: false, error: servingsError };
   if (!record(value.times)) return { ok: false, error: 'times : objet obligatoire.' };

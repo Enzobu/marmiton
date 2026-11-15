@@ -39,10 +39,14 @@ test('Owner CRUD persists related rows and removes replaced images', { skip: !pr
     assert.equal((await app.inject(image)).statusCode, 404);
     assert.equal((await app.inject({ url: image, headers })).headers['content-type'], 'image/png');
     const update = await app.inject({ method: 'PUT', url: path, headers, payload: {
-      recipe: { ...RECIPE_JSON_EXAMPLE, title: 'Recette de test', steps: ['Étape mise à jour'] }, isPublic: true,
+      recipe: { ...RECIPE_JSON_EXAMPLE, title: 'Recette de test', difficulty: 'Difficile', steps: ['Étape mise à jour'] }, isPublic: true,
     } });
     assert.equal(update.statusCode, 200);
     assert.deepEqual(update.json().steps, ['Étape mise à jour']);
+    assert.equal(update.json().difficulty, 'Difficile');
+    const catalog = await app.inject('/recipes?difficulty=Difficile');
+    assert.equal(catalog.statusCode, 200);
+    assert.ok(catalog.json().items.some((recipe: { id: string }) => recipe.id === id));
     assert.equal((await app.inject(path)).statusCode, 200);
     assert.deepEqual(await readdir(dir), []);
     assert.equal((await app.inject({ method: 'DELETE', url: path, headers })).statusCode, 204);
