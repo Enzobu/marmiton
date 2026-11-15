@@ -1,69 +1,46 @@
-# Workflow de développement — Marmiton
+# Développement et déploiement de Marmiton
 
-## Branches et autorisations
+## Branches
 
-```text
-main (production)
-  └── dev (intégration, créée depuis main)
-       ├── feat/*
-       ├── fix/*
-       └── chore/*
+Créer un ticket et une branche depuis `dev`, puis ouvrir une PR vers `dev`. La fusion sur `dev` est autorisée si les contrôles obligatoires passent et que la PR est fusionnable. Fermer le ticket et nettoyer la branche après fusion. La promotion `dev` → `main` et le déploiement qui en découle exigent une autorisation explicite distincte.
+
+La CI applique les migrations sur MariaDB, charge deux fois le seed, exécute le typecheck, le lint, les tests et les collections Postman et Bruno, puis construit les images. Elle vérifie aussi le proxy, le CORS, la restauration et le SHA servi par l’image API. Le contrôle obligatoire est `ci-required`.
+
+## Lancement local
+
+Copier `.env.example` vers `.env`, renseigner les identifiants MariaDB, créer les deux chemins absolus et préparer leurs permissions. Le service API écrit dans `UPLOADS_PATH` sous l’UID 1000. MariaDB utilise son propre répertoire, séparé des fichiers envoyés.
+
+```sh
+docker compose up -d --build
 ```
 
-- Créer une issue et une branche depuis `dev` pour chaque intervention.
-- Ouvrir une PR vers `dev`. L'utilisateur a autorisé **à l'avance** la fusion vers `dev` dès que la PR est fusionnable et que les validations obligatoires ont réellement réussi. En cas de CI rouge, conflit ou protection GitHub, ne pas forcer : corriger ou signaler.
-- Fermer les issues effectivement terminées et nettoyer les branches de feature après merge confirmé.
-- Pour mettre en production : ouvrir une PR **depuis `dev` vers `main`**, exiger CI verte et demander une **autorisation explicite pour cette promotion**. Ne jamais merger `main` silencieusement.
-- Pas de préproduction. Une fois la CD configurée et vérifiée, chaque fusion/push sur `main` déclenchera la production. Aucune CD ne doit se déclencher sur `dev`.
+Le front est servi sur `http://localhost:8080`. Avec `VITE_API_URL=/api`, le Nginx du front relaie les requêtes vers l’API interne. La base démarre d’abord et le conteneur API applique les migrations versionnées avec `prisma migrate deploy` avant d’écouter. La commande d’initialisation du propriétaire et les fixtures sont décrites dans [testing/README.md](testing/README.md).
 
-## CI actuellement présente
+## Production avec Nginx Proxy Manager
 
-`.github/workflows/ci.yml` se déclenche sur PR et push vers `dev` et `main`. Elle exécute les validations du référentiel agent-rules, puis côté application : installation npm, génération Prisma, typecheck, lint, tests et build. Le contrôle de passage stable est `ci-required`.
+Dans Dokploy, choisir Docker Compose avec une source Git sur `main`, puis sélectionner `docker-compose.yml`. Créer les chemins hôtes sous `/etc/dokploy_volume/marmiton/` selon `.env.example`, avec les permissions du compte de chaque conteneur. Le service MariaDB reste joignable uniquement sur le réseau Compose.
 
-**Limites actuelles :** `lint` du workspace est pour le moment un alias de typecheck, pas ESLint. Les collections Postman/Bruno ne sont pas encore exécutées dans la CI. Le schéma Prisma n'a pas encore de migration versionnée ; les tests DB et le build Docker restent à ajouter. Ne pas présenter ces contrôles absents comme validés.
+- Router `marmiton.enzo-palermo.com` via Nginx Proxy Manager vers le service `web` sur le port conteneur 80.
+- Router `marmiton-api.enzo-palermo.com` vers `api` sur le port conteneur 3001 sans ouvrir ce port sur Internet. Si NPM passe par Traefik, conserver les deux noms d’hôte et les routes Dokploy correspondantes. Si NPM joint directement une autre machine, utiliser une adresse privée et limiter par pare-feu l’accès au port publié à la machine NPM.
+- Configurer `VITE_API_URL=https://marmiton-api.enzo-palermo.com` dans Compose avant le build du front.
+- Configurer `CORS_ORIGIN=https://marmiton.enzo-palermo.com`, `PUBLIC_WEB_URL=https://marmiton.enzo-palermo.com` et les paramètres `SMTP_*` côté API. Augmenter au besoin la limite de corps du proxy API à 4 Mo pour les photos encodées en JSON. Conserver HTTPS sur les deux hôtes publics.
+- Vérifier dans le navigateur le catalogue, la connexion, puis un appel authentifié. Les collections de test utilisent la MariaDB de CI ou une instance locale isolée.
 
-Configurer sur GitHub les Rulesets des deux branches pour interdire les pushes directs, exiger des PR et le check `ci-required`. Le connecteur GitHub ne permet pas de lire les protections existantes (403) : cette étape doit être vérifiée dans les réglages GitHub.
+### Déploiement et version
 
-## Déploiement production (workflow activé dès promotion sur main)
+Dans l’environnement GitHub `production`, configurer les secrets `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` ainsi que les variables `DOKPLOY_URL` et `APP_VERSION_URL=https://marmiton-api.enzo-palermo.com/api/version`. Restreindre cet environnement à `main`. La CI déclenche le déploiement depuis un push sur `main` après ses contrôles. Éviter un second déclencheur automatique Dokploy sur le même push.
 
-La cible souhaitée est **Dokploy, production seule, déclenchée depuis `main` après une CI réussie**. Le job `deploy-prod` est activé : il est déclenché exclusivement par un **push sur `main`**, après réussite de `ci-required` sur ce même run. Il reste absent de `main` tant que la promotion `dev` vers `main` n'a pas été autorisée et réalisée. Aucun déploiement n'a été effectué lors de cette préparation.
+Construire l’API depuis le checkout Git Dokploy, avec BuildKit et le répertoire `.git` présent dans le checkout. Le Dockerfile inscrit le SHA de ce checkout dans l’image, et l’API le sert avec un contrôle de connexion MariaDB. Le job attend la fin du déploiement correspondant puis compare le SHA à celui qui a passé la CI. Un contexte sans métadonnées Git sert 503 sur `/api/version`. Vérifier sur l’instance Dokploy que le checkout garde ces métadonnées et que la réponse de `compose.deploy` fournit l’identifiant de déploiement attendu.
 
-Avant d'activer le job de production :
+### Sauvegarde, restauration et migrations
 
-1. Définir le GitHub Environment `production` avec secrets `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` et variables `DOKPLOY_URL` et éventuellement `APP_HEALTH_URL`.
-2. Vérifier la compatibilité de `agent/scripts/dokploy_deploy.sh` avec la version réelle de Dokploy, l'identifiant du nouveau déploiement et les états terminaux.
-3. Construire la CD dans le même workflow, conditionnée par `needs: ci-required` et `github.ref == 'refs/heads/main'` ; ne pas réutiliser un contrôle vert d'un autre SHA.
-4. Tester la méthode de rollback, la stratégie de migration et les sauvegardes avant la première activation. Ne jamais pointer de collections de test sur la production.
+Avant une promotion qui ajoute une migration, suspendre les écritures en arrêtant le service API et sauvegarder ensemble MariaDB et le répertoire de fichiers. Le dump ci-dessous récupère le mot de passe dans le conteneur DB. Enregistrer les archives hors du répertoire monté et limiter l’accès, car elles contiennent les données et les informations d’authentification.
 
-La politique demandée est enregistrée dans `.agent/project-policy.yml`, avec une extension locale documentée qui ne modifie pas les règles canoniques du template.
-
-### Configurer et vérifier la CD Dokploy
-
-Les paramètres fournis dans GitHub sont :
-- secrets : `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` ;
-- variable : `DOKPLOY_URL` (URL HTTPS de l'instance Dokploy).
-
-Configurer également, au même niveau que ces paramètres (ou dans l'environnement GitHub `production`) :
-- `APP_HEALTH_URL` (facultative pendant cette phase) : URL HTTPS de disponibilité HTTP de l'application, par exemple `/api/health`. Sans elle, le job ne valide pas la santé de l'application.
-- Aucun flag `CD_ENABLED` n'est nécessaire : le déclenchement sur `main` est automatique dès que ce workflow y est intégré.
-
-**Contrôle de version temporairement suspendu à la demande du propriétaire.** Le script spécifique `scripts/dokploy_deploy.sh` exige la branche `main`, l'identifiant du nouveau déploiement et son succès terminal. Il ne vérifie **pas** le SHA servi et ne doit jamais annoncer une version exacte déployée. Les règles et scripts canoniques `agent/` restent inchangés. À l'arrivée de l'API, ajouter `/api/version` et rétablir la vérification stricte `APP_VERSION_URL` / SHA avec tests. La compatibilité du parsing Dokploy doit encore être vérifiée contre l'instance avant activation.
-
-Les PR sur `dev` ne déploient pas. Chaque fusion approuvée sur `main` entraînera automatiquement une tentative de déploiement, sans fusion automatique sur `main`. Pour une protection supplémentaire, configurer l'environnement GitHub `production` (restrictions aux branches `main`, éventuelle approbation).
-
-## Frontend et Docker Compose (phase UI)
-
-Le fichier Compose unique est désormais `docker-compose.yml` à la racine, et **seul** `.env.example` est versionné. Pour tester l'interface en local :
-
-```bash
-cp .env.example .env
-docker compose -f docker-compose.yml up --build -d web
+```sh
+umask 077
+docker compose stop api
+docker compose exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" exec mariadb-dump --single-transaction -uroot "$MARIADB_DATABASE"' > database.sql
+tar -C /etc/dokploy_volume/marmiton/uploads -czf uploads.tar.gz .
 ```
 
-Par défaut, l'interface est accessible sur `http://localhost:8080`. Modifier `WEB_PORT` dans `.env` ou les variables Dokploy si nécessaire. `WEB_BIND_ADDRESS` permet de choisir l'interface d'écoute. Le service web fonctionne seul, avec des recettes fictives. Les images des recettes sont chargées depuis Unsplash tant que les uploads ne sont pas implémentés.
-
-Les services `api` et `db` sont conservés sous le profil `backend` : `docker compose -f docker-compose.yml --profile backend up --build -d` après renseignement des identifiants MariaDB, préparation des chemins absolus `DB_DATA_PATH` et `UPLOADS_PATH`, et mise en place des migrations. Un démarrage en production avec la base exige aussi des sauvegardes et une revue des permissions.
-
-**Dokploy :** sélectionner `docker-compose.yml` en configuration Compose et publier le port conteneur `80` du service `web`. Les publications de ports sur l'hôte peuvent être ajustées depuis `.env`/les variables Dokploy ; elles ne remplacent pas la configuration du routage Traefik.
-
-**Limites CD :** le contrôle de SHA est différé à l'API. La corrélation d'identifiant de déploiement du script Dokploy n'a pas encore été testée sur l'instance réelle. Un push sur `main` pourrait donc déclencher la CD puis échouer à la vérification, ce qui devra être diagnostiqué sans prétendre que le déploiement est validé.
+Pour valider un retour arrière, créer une pile isolée avec une base et des chemins de bind mount vides. Importer le dump dans cette base et extraire l’archive de fichiers dans le nouveau répertoire d’uploads. Démarrer une image de la révision qui a produit la sauvegarde et vérifier les migrations déjà appliquées, l’ouverture d’une recette, son image et les parcours protégés. Pour reprendre l’exploitation après sauvegarde, redémarrer l’API ou lancer le déploiement validé. La restauration de la production demande une autorisation dédiée. La CI reproduit l’import MariaDB et vérifie le lien entre une ligne restaurée et son fichier.

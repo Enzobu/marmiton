@@ -52,7 +52,7 @@ jobs:
           MARIADB_DATABASE: marmiton_test
           MARIADB_USER: marmiton
           MARIADB_PASSWORD: fixture-password
-          MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+          MARIADB_ROOT_PASSWORD: isolated-ci-root-fixture
         ports: ["3306:3306"]
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
@@ -79,8 +79,11 @@ jobs:
         run: node apps/api/dist/create-owner.js
       - run: npm test
       - name: Verify Postman and Bruno collections against MariaDB
+        env:
+          TEST_REVISION: "1111111111111111111111111111111111111111"
         run: |
-          UPLOADS_DIRECTORY="$(mktemp -d)" node apps/api/dist/server.js &
+          export UPLOADS_DIRECTORY="$(mktemp -d)"
+          node --input-type=module -e 'import { buildApp } from "./apps/api/dist/app.js"; await buildApp({ revision: process.env.TEST_REVISION }).listen({ host: "127.0.0.1", port: 3001 });' &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           curl --retry 15 --retry-connrefused --retry-delay 1 --fail http://localhost:3001/health
@@ -88,8 +91,40 @@ jobs:
           (cd testing/bruno && npx --yes @usebruno/cli@2 run --env marmiton_local)
       - name: Validate root Docker Compose
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
-      - name: Build frontend image
-        run: docker compose --env-file .env.example -f docker-compose.yml build web
+      - name: Build frontend and API images
+        run: docker compose --env-file .env.example -f docker-compose.yml build web api
+      - name: Verify proxy, CORS and real SHA from the API image
+        run: |
+          export DB_NAME=marmiton_test DB_USER=marmiton DB_PASSWORD=fixture-password DB_ROOT_PASSWORD=isolated-ci-root-fixture
+          export DB_DATA_PATH="$(mktemp -d)" UPLOADS_PATH="$(mktemp -d)"
+          export WEB_BIND_ADDRESS=127.0.0.1 WEB_PORT=18080 API_PORT=13001
+          export CORS_ORIGIN=https://marmiton.enzo-palermo.com
+          chmod 0755 "$UPLOADS_PATH"
+          docker compose --env-file .env.example up -d
+          trap 'docker compose --env-file .env.example down' EXIT
+          direct=http://127.0.0.1:13001
+          web=http://127.0.0.1:18080
+          curl --retry 20 --retry-all-errors --retry-delay 3 --fail "$direct/api/version" | jq -e --arg sha "$GITHUB_SHA" '.sha == $sha'
+          curl --fail "$web/api/health" | jq -e '.status == "ok"'
+          curl --fail "$web/api/recipes?limit=1" | jq -e '.limit == 1 and .total == 0'
+          curl --fail -sS -D /tmp/marmiton-cors.headers -o /dev/null -X OPTIONS \
+            -H 'Origin: https://marmiton.enzo-palermo.com' -H 'Access-Control-Request-Method: PUT' \
+            -H 'Access-Control-Request-Headers: authorization,content-type' "$direct/me/profile"
+          grep -qi '^access-control-allow-origin: https://marmiton.enzo-palermo.com' /tmp/marmiton-cors.headers
+          docker compose --env-file .env.example exec -T \
+            -e OWNER_EMAIL=owner@example.invalid -e OWNER_PASSWORD=Fixture-Password42 \
+            -e OWNER_FIRST_NAME=Test -e OWNER_LAST_NAME=Owner api node dist/create-owner.js
+          token="$(curl -fsS "$direct/auth/login" -H 'Origin: https://marmiton.enzo-palermo.com' \
+            -H 'Content-Type: application/json' --data '{"email":"owner@example.invalid","password":"Fixture-Password42"}' | jq -er '.accessToken')"
+          curl -fsS "$direct/auth/me" -H 'Origin: https://marmiton.enzo-palermo.com' \
+            -H "Authorization: Bearer $token" | jq -e '.email == "owner@example.invalid"'
+          unset token
+      - name: Verify database and upload backup restoration
+        env:
+          MARIADB_CONTAINER: ${{ job.services.mariadb.id }}
+        run: bash scripts/test-restore.sh
+      - name: Verify Dokploy SHA acceptance and mismatch rejection offline
+        run: bash scripts/test-dokploy-version.sh
 
   ci-required:
     name: ci-required
@@ -130,16 +165,18 @@ jobs:
           DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
-          APP_HEALTH_URL: ${{ vars.APP_HEALTH_URL }}
+          APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
         run: |
           test -n "$DOKPLOY_URL" || { echo "::error::Missing DOKPLOY_URL variable"; exit 1; }
           test -n "$DOKPLOY_API_KEY" || { echo "::error::Missing DOKPLOY_API_KEY secret"; exit 1; }
           test -n "$DOKPLOY_COMPOSE_ID" || { echo "::error::Missing DOKPLOY_COMPOSE_ID secret"; exit 1; }
+          test -n "$APP_VERSION_URL" || { echo "::error::Missing APP_VERSION_URL variable"; exit 1; }
       - name: Trigger Dokploy and check deployment completion
         env:
           DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
           EXPECTED_SOURCE_REF: ${{ github.ref }}
-          APP_HEALTH_URL: ${{ vars.APP_HEALTH_URL }}
+          EXPECTED_COMMIT_SHA: ${{ github.sha }}
+          APP_VERSION_URL: ${{ vars.APP_VERSION_URL }}
         run: bash scripts/dokploy_deploy.sh
