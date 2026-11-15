@@ -1,0 +1,15 @@
+meta {
+  name: GET /auth/me (guest)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/auth/me
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

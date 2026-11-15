@@ -10,7 +10,7 @@ const recipeData = readFileSync(new URL('../src/recipe-data.ts', import.meta.url
 const css = readFileSync(new URL('../src/account.css', import.meta.url), 'utf8');
 
 test('All navigable frontend paths use English segments', () => {
-  for (const path of ['/profile', '/my-recipes', '/favorites', '/recipes', '/recipes/new', '/login', '/register', '/forgot-password', '/verify-email', '/reset-password']) {
+  for (const path of ['/profile', '/my-recipes', '/favorites', '/recipes', '/recipes/new', '/login', '/forgot-password', '/reset-password']) {
     assert.ok([app, auth, account, recipePages, recipeData].some(source => source.includes(path)), path);
   }
   for (const legacy of ['/recettes', '/connexion', '/inscription', '/mot-de-passe-oublie', '/verification-email', '/reinitialiser-mot-de-passe']) {

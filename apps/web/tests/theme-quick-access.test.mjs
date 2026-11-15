@@ -20,7 +20,7 @@ const { ThemeToggle } = component.exports;
 test('The navbar uses a single theme control available to guests and members', () => {
   const controls = [...app.matchAll(/<ThemeToggle value=\{themePreference\} onChange=\{updateThemePreference\}\/>/g)];
   assert.equal(controls.length, 1);
-  assert.ok(controls[0].index < app.indexOf('{demoUser ? <div className="profile-menu-wrap"'));
+  assert.ok(controls[0].index < app.indexOf('{profile ? <div className="profile-menu-wrap"'));
 });
 
 test('Activating the button cycles the theme and updates the icon and accessible name', () => {

@@ -17,6 +17,12 @@ services:
     restart: unless-stopped
     environment:
       API_PORT: "3001"
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@enzo-palermo.com}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       DATABASE_URL: mysql://${DB_USER:-marmiton}:${DB_PASSWORD:-}@db:3306/${DB_NAME:-marmiton}
     depends_on:

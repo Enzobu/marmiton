@@ -53,3 +53,35 @@ model RecipeStep {
 
   @@id([recipeId, position])
 }
+
+model Owner {
+  id           Int             @id
+  email        String          @unique @db.VarChar(254)
+  firstName    String          @db.VarChar(70)
+  lastName     String          @db.VarChar(70)
+  passwordHash String          @db.VarChar(180)
+  bio          String          @default("") @db.VarChar(1000)
+  newsletter   Boolean         @default(false)
+  publicRecipes Boolean        @default(true)
+  avatar       String?         @db.VarChar(255)
+  sessions     Session[]
+  resets       PasswordReset[]
+}
+
+model Session {
+  digest    String   @id @db.Char(64)
+  ownerId   Int
+  expiresAt DateTime
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, expiresAt])
+}
+
+model PasswordReset {
+  digest    String   @id @db.Char(64)
+  ownerId   Int
+  expiresAt DateTime
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, expiresAt])
+}

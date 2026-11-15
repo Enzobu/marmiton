@@ -71,6 +71,13 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Provision HTTP test account on isolated MariaDB
+        env:
+          OWNER_EMAIL: owner@example.invalid
+          OWNER_FIRST_NAME: Test
+          OWNER_LAST_NAME: Owner
+          OWNER_PASSWORD: Fixture-Password42
+        run: node apps/api/dist/create-owner.js
       - name: Verify Postman and Bruno collections against MariaDB
         run: |
           node apps/api/dist/server.js &

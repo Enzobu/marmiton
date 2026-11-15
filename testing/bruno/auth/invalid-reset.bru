@@ -1,0 +1,22 @@
+meta {
+  name: POST /auth/reset-password (invalid-reset)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/auth/reset-password
+  body: json
+  auth: none
+}
+
+body:json {
+{
+  "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "password": "Replacement-Password43"
+}
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}
