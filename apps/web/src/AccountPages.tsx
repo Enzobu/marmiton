@@ -10,12 +10,12 @@ type Props = {
   page: AccountRoute;
   profile: Profile | null;
   recipes: Recipe[];
-  favorites: number[];
+  favorites: Recipe['id'][];
   myRecipes: Recipe[];
   navigate: (path: string) => void;
   onProfileChange: (profile: Profile) => void;
-  onFavoriteToggle: (id: number) => void;
-  onDeleteRecipe: (id: number) => void;
+  onFavoriteToggle: (id: Recipe['id']) => void;
+  onDeleteRecipe: (id: Recipe['id']) => void;
   developerMode: boolean;
   onDeveloperModeChange: (enabled: boolean) => void;
 };
@@ -67,7 +67,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
   }
 
   const source = page === 'favorites' ? recipes.filter(recipe => favorites.includes(recipe.id)) : myRecipes;
-  const filtered = source.filter(recipe => [recipe.title,recipe.category,recipe.description].join(' ').toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr'))).sort((a,b) => sort === 'name' ? a.title.localeCompare(b.title,'fr') : sort === 'time' ? a.time-b.time : (page === 'my-recipes' ? b.id-a.id : 0));
+  const filtered = source.filter(recipe => [recipe.title,recipe.category,recipe.description].join(' ').toLocaleLowerCase('fr').includes(query.trim().toLocaleLowerCase('fr'))).sort((a,b) => sort === 'name' ? a.title.localeCompare(b.title,'fr') : sort === 'time' ? a.time-b.time : 0);
 
   const onPhoto = (event: ChangeEvent<HTMLInputElement>) => {
     setPhotoError('');

@@ -43,6 +43,20 @@ jobs:
     name: Validate Marmiton application
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: mysql://marmiton:fixture-password@127.0.0.1:3306/marmiton_test
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: marmiton_test
+          MARIADB_USER: marmiton
+          MARIADB_PASSWORD: fixture-password
+          MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=3s --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,10 +64,21 @@ jobs:
           node-version: "22"
       - run: npm install --no-audit --no-fund
       - run: npm run db:generate
+      - run: npm exec -w @marmiton/api -- prisma migrate deploy
+      - run: npm exec -w @marmiton/api -- prisma db seed
+      - run: npm exec -w @marmiton/api -- prisma db seed
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Verify Postman and Bruno collections against MariaDB
+        run: |
+          node apps/api/dist/server.js &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          curl --retry 15 --retry-connrefused --retry-delay 1 --fail http://localhost:3001/health
+          npx --yes newman@6 run testing/postman/marmiton.postman_collection.json -e testing/postman/marmiton_local.postman_environment.json
+          (cd testing/bruno && npx --yes @usebruno/cli@2 run --env marmiton_local)
       - name: Validate root Docker Compose
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
       - name: Build frontend image

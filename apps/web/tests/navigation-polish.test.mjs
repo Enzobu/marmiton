@@ -22,8 +22,7 @@ test('Main navigation highlights the active route in desktop and mobile menus', 
   assert.match(main, /path === '\/' \? 'home'/);
   assert.match(main, /path === '\/favorites' \? 'favorites'/);
   assert.match(main, /path === '\/recipes\/new'/);
-  assert.match(main, /\^\\\/recipes\\\/\\d\+\\\/edit\$/);
-  assert.match(main, /\^\\\/recipes\\\/\\d\+\$/);
+  assert.match(main, /path === '\/recipes' \|\| detailId/);
   for (const id of ['home', 'recipes', 'favorites', 'create']) {
     const re = new RegExp(`activeNav === '${id}'`, 'g');
     assert.equal([...main.matchAll(re)].length, 4, `desktop and mobile active class and aria-current for ${id}`);

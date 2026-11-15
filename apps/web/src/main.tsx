@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { recipes, ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
+import { ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
-import { filterCatalogRecipes, parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
+import { parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
+import { apiRequest, ApiError, fromApiRecipe, type ApiRecipe, type CatalogPage } from './api';
 import { ThemeToggle, type ThemePreference } from './ThemeToggle';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
@@ -30,11 +31,11 @@ function Icon({ name, size = 20 }: { name: 'search' | 'heart' | 'clock' | 'star'
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-function RecipeCard({ recipe, saved, onToggle, onOpen }: { recipe: Recipe; saved: boolean; onToggle: (id: number) => void; onOpen: (recipe: Recipe) => void }) {
+function RecipeCard({ recipe, saved, onToggle, onOpen }: { recipe: Recipe; saved: boolean; onToggle: (id: Recipe['id']) => void; onOpen: (recipe: Recipe) => void }) {
   const [imageReady, setImageReady] = useState(false);
   return <article className="recipe-card">
-    <a className={`recipe-image-button ${imageReady ? "image-ready" : ""}`} aria-busy={!imageReady} href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }} aria-label={`Voir la recette ${recipe.title}`}>
-      <img src={recipe.image} alt={recipe.title} loading="lazy" onLoad={() => setImageReady(true)} onError={() => setImageReady(true)}/>
+    <a className={`recipe-image-button ${imageReady || !recipe.image ? "image-ready" : ""}`} aria-busy={Boolean(recipe.image) && !imageReady} href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }} aria-label={`Voir la recette ${recipe.title}`}>
+      {recipe.image && <img src={recipe.image} alt={recipe.title} loading="lazy" onLoad={() => setImageReady(true)} onError={() => setImageReady(true)}/>}
       {recipe.badge && <span className="recipe-badge">{recipe.badge}</span>}
     </a>
     <button className={`favorite ${saved ? 'active' : ''}`} onClick={() => onToggle(recipe.id)} aria-label={saved ? `Retirer ${recipe.title} des favoris` : `Ajouter ${recipe.title} aux favoris`} aria-pressed={saved}><Icon name="heart" size={20}/></button>
@@ -54,7 +55,7 @@ function App() {
   const [maxTimeFilter, setMaxTimeFilter] = useState<number | null>(() => parseCatalogQuery(window.location.search).maxTime);
   const [sortFilter, setSortFilter] = useState<CatalogSort>(() => parseCatalogQuery(window.location.search).sort);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<Recipe['id'][]>([]);
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastId = useRef(0);
@@ -137,35 +138,32 @@ function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
-  const allRecipes = useMemo(() => [...createdRecipes, ...recipes], [createdRecipes]);
   const catalogFilters: CatalogFilters = { query: search, category, difficulty: difficultyFilter, budget: budgetFilter, maxTime: maxTimeFilter, sort: sortFilter };
   useEffect(() => {
     if (path !== '/recipes') return;
     const desired = `/recipes${serializeCatalogQuery(catalogFilters)}`;
     if (window.location.pathname + window.location.search !== desired) window.history.replaceState(null, '', desired);
   }, [path, search, category, difficultyFilter, budgetFilter, maxTimeFilter, sortFilter]);
-  const detailId = /^\/recipes\/(\d+)$/.exec(path)?.[1];
-  const editId = /^\/recipes\/(\d+)\/edit$/.exec(path)?.[1];
-  const editRecipe = editId ? createdRecipes.find(recipe => recipe.id === Number(editId)) : undefined;
+  const detailId = /^\/recipes\/([\da-f-]+)$/i.exec(path)?.[1];
+  const editId = /^\/recipes\/([\da-f-]+)\/edit$/i.exec(path)?.[1];
+  const editRecipe = editId ? createdRecipes.find(recipe => String(recipe.id) === editId) : undefined;
   const accountRoute = ({ '/profile': 'profile', '/my-recipes': 'my-recipes', '/favorites': 'favorites' } as Record<string, AccountRoute>)[path];
-  const selectedRecipe = detailId ? allRecipes.find(recipe => recipe.id === Number(detailId)) : undefined;
   const isHome = path === '/';
   const activeNav = path === '/' ? 'home'
     : path === '/favorites' ? 'favorites'
-    : path === '/recipes/new' || /^\/recipes\/\d+\/edit$/.test(path) ? 'create'
-    : path === '/recipes' || /^\/recipes\/\d+$/.test(path) ? 'recipes'
+    : path === '/recipes/new' || editId ? 'create'
+    : path === '/recipes' || detailId ? 'recipes'
     : null;
   const isCatalog = path === '/recipes';
   const isCreate = path === '/recipes/new';
   const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
-  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe;
   const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number, metadata: { rest: number; budget: string; utensils: string[]; servings: number }) => {
     ingredientQuantities[recipe.id] = ingredients;
     recipePreparation[recipe.id] = { prep, cook, ...metadata };
     setCreatedRecipes(current => [recipe, ...current.filter(item => item.id !== recipe.id)]);
     notify('Recette de démonstration enregistrée.');
   };
-  const deleteCreatedRecipe = (id: number) => {
+  const deleteCreatedRecipe = (id: Recipe['id']) => {
     setCreatedRecipes(current => current.filter(recipe => recipe.id !== id));
     setFavorites(current => current.filter(value => value !== id));
     notify('Recette de démonstration supprimée.');
@@ -173,20 +171,52 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
-  const filtered = useMemo(() => filterCatalogRecipes(allRecipes, recipePreparation, {
-    query: search, category,
-    difficulty: isCatalog ? difficultyFilter : '',
-    budget: isCatalog ? budgetFilter : '',
-    maxTime: isCatalog ? maxTimeFilter : null,
-    sort: isCatalog ? sortFilter : 'relevance'
-  }).filter(recipe => !onlyFavorites || favorites.includes(recipe.id)), [allRecipes, search, category, isCatalog, difficultyFilter, budgetFilter, maxTimeFilter, sortFilter, onlyFavorites, favorites]);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalog, setCatalog] = useState<{ key: string; data?: CatalogPage; error?: boolean }>();
+  const [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
+  const [detail, setDetail] = useState<{ id: string; recipe?: Recipe; error?: boolean }>();
+  const query = new URLSearchParams(serializeCatalogQuery(catalogFilters));
+  query.set('limit', isHome && !showAll ? '6' : '24');
+  const filterKey = query.toString();
+  useEffect(() => { setCatalogPage(1); }, [filterKey]);
+  query.set('page', String(catalogPage));
+  const catalogKey = query.toString();
+  useEffect(() => {
+    if (!isHome && !isCatalog) return;
+    const controller = new AbortController();
+    apiRequest<CatalogPage>(`/recipes?${catalogKey}`, { signal: controller.signal })
+      .then(data => setCatalog({ key: catalogKey, data }))
+      .catch(() => { if (!controller.signal.aborted) setCatalog({ key: catalogKey, error: true }); });
+    return () => controller.abort();
+  }, [catalogKey, isHome, isCatalog]);
+  const localRecipe = detailId ? createdRecipes.find(recipe => String(recipe.id) === detailId) : undefined;
+  useEffect(() => {
+    if (!detailId || localRecipe || !detailId.includes('-')) return;
+    const controller = new AbortController();
+    apiRequest<ApiRecipe>(`/recipes/${detailId}`, { signal: controller.signal })
+      .then(recipe => setDetail({ id: detailId, recipe: fromApiRecipe(recipe) }))
+      .catch(error => {
+        if (!controller.signal.aborted) setDetail({ id: detailId, error: !(error instanceof ApiError && [400, 404].includes(error.status)) });
+      });
+    return () => controller.abort();
+  }, [detailId, localRecipe]);
+  const currentCatalog = catalog?.key === catalogKey ? catalog : undefined;
+  const currentDetail = detail?.id === detailId ? detail : undefined;
+  const selectedRecipe = localRecipe ?? currentDetail?.recipe;
+  const detailLoading = Boolean(detailId?.includes('-') && !localRecipe && !currentDetail);
+  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error;
+  const visible = useMemo(() => catalog?.data?.items.map(fromApiRecipe) ?? [], [catalog]);
+  const allRecipes = Array.from(new Map([...visible, ...favoriteRecipes, ...createdRecipes].map(recipe => [recipe.id, recipe])).values());
+  const total = currentCatalog?.data?.total ?? 0;
   const resetAdvancedFilters = () => { setSearch(''); setCategory('Toutes les recettes'); setDifficultyFilter(''); setBudgetFilter(''); setMaxTimeFilter(null); setSortFilter('relevance'); setOnlyFavorites(false); };
   const hasCatalogFilters = Boolean(search || category !== 'Toutes les recettes' || difficultyFilter || budgetFilter || maxTimeFilter !== null || sortFilter !== 'relevance');
 
-  const visible = (isCatalog || search || category !== 'Toutes les recettes' || onlyFavorites || showAll) ? filtered : filtered.slice(0, 6);
-  const toggleFavorite = (id: number) => {
+  const toggleFavorite = (id: Recipe['id']) => {
     if (!demoUser) { navigate('/login'); return; }
     const alreadySaved = favorites.includes(id);
+    const recipe = allRecipes.find(item => item.id === id) ?? selectedRecipe;
+    if (recipe && !alreadySaved) setFavoriteRecipes(current => [...current.filter(item => item.id !== id), recipe]);
+    if (alreadySaved) setFavoriteRecipes(current => current.filter(item => item.id !== id));
     setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
     notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
   };
@@ -214,7 +244,7 @@ function App() {
             <button onClick={() => { setProfileOpen(false); navigate('/my-recipes'); }}>Mes recettes</button>
             <button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button>
             <button onClick={() => { setProfileOpen(false); navigate('/recipes/new'); }}>Créer une recette</button>
-            <button className="profile-logout" onClick={() => { setDemoUser(null); setFavorites([]); setOnlyFavorites(false); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
+            <button className="profile-logout" onClick={() => { setDemoUser(null); setFavorites([]); setFavoriteRecipes([]); setOnlyFavorites(false); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
             <span className="profile-demo-tag">Compte de démonstration, non persistant</span>
           </div>}
         </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
@@ -234,7 +264,7 @@ function App() {
       </section>
       <section className="categories-section section-container" aria-labelledby="categories-title"><div className="section-heading"><div><span className="section-kicker">Une envie particulière ?</span><h2 id="categories-title">Qu'est-ce qui te ferait plaisir ?</h2></div><p>Il y a toujours une bonne raison de se régaler.</p></div><div className="category-grid">{categories.slice(1).map(item => <button key={item} className={`category-tile ${category === item && !onlyFavorites ? 'selected' : ''}`} onClick={() => chooseCategory(item)}><span className="category-emoji" aria-hidden="true">{categoryInitials[item]}</span><span>{item}</span><Icon name="arrow" size={17}/></button>)}</div></section></>}
       {isCatalog && <section className="catalog-intro"><span className="section-kicker">Toutes les bonnes idées</span><h1>À chaque envie, sa recette.</h1><p>Un petit creux, une grande occasion ou simplement envie de cuisiner ? Explore notre carnet et trouve de quoi régaler tout le monde.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Chercher une recette</label><input id="catalog-search" placeholder="Une recette, un ingrédient..." value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form></section>}
-      {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Des idées pour se régaler'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Nos recettes à découvrir' : category}</h2></div><span className="recipe-count">{filtered.length} recette{filtered.length > 1 ? 's' : ''}</span></div>
+      {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Des idées pour se régaler'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Nos recettes à découvrir' : category}</h2></div><span className="recipe-count">{total} recette{total > 1 ? 's' : ''}</span></div>
         <div className="filter-bar"><div className="filter-chips" role="group" aria-label="Filtrer les recettes"><button className={category === 'Toutes les recettes' && !onlyFavorites ? 'active' : ''} onClick={() => { setOnlyFavorites(false); setCategory('Toutes les recettes'); }}>Tout voir</button>{categories.slice(1).map(item => <button key={item} className={!onlyFavorites && category === item ? 'active' : ''} onClick={() => { setCategory(item); setOnlyFavorites(false); }}>{item}</button>)}<button className={onlyFavorites ? 'active' : ''} onClick={openFavorites}><Icon name="heart" size={14}/>Favoris</button></div><span className="filter-caption"><Icon name="sliders" size={17}/> Trouve ton bonheur</span></div>
         {isCatalog && <div className="advanced-search-panel" role="group" aria-label="Filtres avancés">
           <label>Difficulté<select value={difficultyFilter} onChange={event => setDifficultyFilter(event.target.value as CatalogFilters['difficulty'])}><option value="">Toutes</option><option value="Facile">Facile</option><option value="Moyen">Moyen</option></select></label>
@@ -243,8 +273,12 @@ function App() {
           <label>Trier par<select value={sortFilter} onChange={event => setSortFilter(event.target.value as CatalogSort)}><option value="relevance">Par défaut</option><option value="popular">Plus populaires</option><option value="rating">Mieux notées</option><option value="prep">Préparation rapide</option><option value="time">Durée totale</option></select></label>
           {hasCatalogFilters && <button type="button" className="advanced-reset" onClick={resetAdvancedFilters}>Effacer les filtres</button>}
         </div>}
-        {visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
-        {filtered.length > visible.length && <div className="see-more"><button onClick={() => setShowAll(true)}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
+        {!currentCatalog ? <p role="status">Chargement des recettes…</p> : currentCatalog.error ? <p role="alert">Impossible de charger les recettes.</p> : visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
+        {isHome && total > visible.length && <div className="see-more"><button onClick={() => navigate('/recipes')}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
+        {isCatalog && currentCatalog?.data && (catalogPage > 1 || total > catalogPage * currentCatalog.data.limit) && <div className="see-more">
+          <button disabled={catalogPage === 1} onClick={() => setCatalogPage(page => page - 1)}>Précédent</button>
+          <button disabled={total <= catalogPage * currentCatalog.data.limit} onClick={() => setCatalogPage(page => page + 1)}>Suivant</button>
+        </div>}
       </section>}
       {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>}
@@ -253,6 +287,8 @@ function App() {
     {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); notify('Compte de démonstration activé.', 'info'); }}/>}
     {accountRoute && (accountRoute !== 'favorites' || demoUser) && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
+    {detailLoading && <p className="section-container" role="status">Chargement de la recette…</p>}
+    {currentDetail?.error && <p className="section-container" role="alert">Impossible de charger la recette.</p>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}
     <ToastRegion toast={toast} onDismiss={() => setToast(null)}/>
     <footer className="site-footer"><div><span className="footer-brand">Les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>

@@ -7,7 +7,7 @@ import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePath, recipe
 import './recipe-pages.css';
 
 type Navigate = (path: string) => void;
-type SharedProps = { navigate: Navigate; favorite: boolean; toggleFavorite: (id: number) => void };
+type SharedProps = { navigate: Navigate; favorite: boolean; toggleFavorite: (id: Recipe['id']) => void };
 
 function Glyph({ name, size = 20 }: { name: 'back' | 'clock' | 'star' | 'heart' | 'minus' | 'plus' | 'check' | 'people' | 'chef' | 'wallet' | 'print' | 'arrow' | 'trash'; size?: number }) {
   const shapes: Record<typeof name, React.ReactNode> = {
@@ -52,19 +52,19 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite }: { r
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
-  const metadata = recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
-  const ingredients = ingredientQuantities[recipe.id] ?? recipe.ingredients.map(name => ({ name, amount: null, icon: 'other' as const }));
+  const metadata = recipe.preparation ?? recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
+  const ingredients = recipe.quantities ?? ingredientQuantities[recipe.id] ?? recipe.ingredients.map(name => ({ name, amount: null, icon: 'other' as const }));
   return <main className="detail-page">
     <div className="detail-container">
       <nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => { event.preventDefault(); navigate('/'); }}>Accueil</a><span>/</span><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}>Recettes</a><span>/</span><span aria-current="page">{recipe.title}</span></nav>
       <div className="detail-intro"><div><span className="section-kicker">La recette du moment · {recipe.category}</span><h1>{recipe.title}</h1><p>{recipe.description}</p><div className="detail-rating"><Glyph name="star" size={17}/><strong>{recipe.rating.toFixed(1).replace('.', ',')} / 5</strong><span>· {recipe.reviews} avis de démonstration</span></div></div><div className="detail-actions"><button className={`detail-outline-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-pressed={favorite}><Glyph name="heart"/>{favorite ? 'Dans mes favoris' : 'Sauvegarder'}</button><button className="detail-icon-button" onClick={() => window.print()} aria-label="Imprimer la recette" title="Imprimer"><Glyph name="print"/></button></div></div>
-      <div className="detail-photo"><img src={recipe.image} alt={recipe.title}/><div className="detail-photo-note">Une recette à cuisiner avec amour</div></div>
+      <div className="detail-photo">{recipe.image && <img src={recipe.image} alt={recipe.title}/>}<div className="detail-photo-note">Une recette à cuisiner avec amour</div></div>
       <div className="detail-stats" aria-label="Informations de la recette"><div><Glyph name="clock" size={22}/><span>Préparation</span><strong>{formatTime(metadata.prep)}</strong></div><div><Glyph name="clock" size={22}/><span>Cuisson</span><strong>{formatTime(metadata.cook)}</strong></div><div><Glyph name="clock" size={22}/><span>Repos</span><strong>{formatTime(metadata.rest)}</strong></div><div><Glyph name="chef" size={23}/><span>Difficulté</span><strong>{recipe.difficulty}</strong></div><div><Glyph name="wallet" size={22}/><span>Budget</span><strong>{metadata.budget}</strong></div></div>
       <div className="detail-columns">
         <aside className="ingredients-panel"><div className="panel-heading"><div><span className="section-kicker">Avant de commencer</span><h2>Ingrédients</h2></div><span className="panel-count">{ingredients.length} ingrédients</span></div>
           <div className="servings-control"><div><Glyph name="people" size={20}/><span>Pour combien de personnes ?</span></div><div className="servings-stepper"><button type="button" onClick={() => setServings(current => Math.max(1, current - 1))} disabled={servings <= 1} aria-label="Diminuer le nombre de personnes"><Glyph name="minus" size={17}/></button><output aria-live="polite">{servings}</output><button type="button" onClick={() => setServings(current => Math.min(12, current + 1))} disabled={servings >= 12} aria-label="Augmenter le nombre de personnes"><Glyph name="plus" size={17}/></button></div></div>
           <p className="panel-hint">Les quantités s’adaptent automatiquement au nombre de personnes.</p>
-          <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings)}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
+          <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, recipe.quantities ? recipe.servings : undefined)}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
           <div className="utensil-block"><h3>Ustensiles</h3><ul>{metadata.utensils.map(item => <li key={item}><Glyph name="chef" size={17}/>{item}</li>)}</ul></div>
           <div className="panel-note"><strong>Petit conseil</strong><p>Coche tes ingrédients au fur et à mesure pour ne rien oublier.</p></div>
         </aside>
