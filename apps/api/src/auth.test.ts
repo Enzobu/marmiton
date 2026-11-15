@@ -52,3 +52,36 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
     await db.$disconnect();
   }
 });
+
+test('Changing the password requires the current password and preserves only the current session', { skip: !process.env.DATABASE_URL }, async () => {
+  const db = new PrismaClient();
+  const email = 'change-password@example.invalid';
+  const original = 'Existing-Password42';
+  const replacement = 'New-Password43';
+  const app = buildApp();
+  try {
+    await db.owner.create({ data: { id: 3, email, firstName: 'Test', lastName: 'Owner', passwordHash: await hashPassword(original) } });
+    const login = (password: string) => app.inject({ method: 'POST', url: '/auth/login', payload: { email, password } });
+    const first = await login(original);
+    const second = await login(original);
+    assert.equal(first.statusCode, 200);
+    assert.equal(second.statusCode, 200);
+    const headers = { authorization: `Bearer ${first.json().accessToken}` };
+    const other = { authorization: `Bearer ${second.json().accessToken}` };
+    await db.passwordReset.create({ data: { digest: '3'.repeat(64), ownerId: 3, expiresAt: new Date(Date.now() + 60000) } });
+    const change = (currentPassword: string, authorization?: typeof headers) =>
+      app.inject({ method: 'POST', url: '/auth/change-password', headers: authorization, payload: { currentPassword, newPassword: replacement } });
+    assert.equal((await change(original)).statusCode, 401);
+    assert.equal((await change('wrong', headers)).statusCode, 403);
+    assert.equal((await change(original, headers)).statusCode, 204);
+    assert.equal((await app.inject({ url: '/auth/me', headers })).statusCode, 200);
+    assert.equal((await app.inject({ url: '/auth/me', headers: other })).statusCode, 401);
+    assert.equal(await db.passwordReset.count({ where: { ownerId: 3 } }), 0);
+    assert.equal((await login(original)).statusCode, 401);
+    assert.equal((await login(replacement)).statusCode, 200);
+  } finally {
+    await app.close();
+    await db.owner.deleteMany({ where: { email } });
+    await db.$disconnect();
+  }
+});

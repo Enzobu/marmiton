@@ -20,7 +20,7 @@ export const passwordChecks = (password: string) => ({
   digit: /[0-9]/.test(password),
   special: /[^A-Za-z0-9]/.test(password)
 });
-export const isPasswordValid = (password: string) => Object.values(passwordChecks(password)).every(Boolean);
+export const isPasswordValid = (password: string) => password.length <= 128 && Object.values(passwordChecks(password)).every(Boolean);
 const titleByPage: Record<AuthProps['page'], string> = {
   login: 'Heureux de te retrouver.',
   forgot: 'Retrouvons ton compte.',
@@ -47,9 +47,9 @@ function Icon({ name, size = 19 }: { name: IconName; size?: number }) {
 function RouteLink({ to, children, navigate, className }: { to: string; children: React.ReactNode; navigate: AuthProps['navigate']; className?: string }) {
   return <a href={to} className={className} onClick={event => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(to); } }}>{children}</a>;
 }
-function PasswordField({ id, label, value, onChange, autoComplete, placeholder, required = true }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; placeholder: string; required?: boolean }) {
+export function PasswordField({ id, label, value, onChange, autoComplete, placeholder, required = true }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; placeholder?: string; required?: boolean }) {
   const [show, setShow] = useState(false);
-  return <div className="auth-field"><label htmlFor={id}>{label}</label><div className="auth-input-wrap"><Icon name="lock"/><input id={id} type={show ? 'text' : 'password'} value={value} autoComplete={autoComplete} onChange={event => onChange(event.target.value)} placeholder={placeholder} required={required}/><button type="button" className="auth-reveal" aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={show} onClick={() => setShow(previous => !previous)}><Icon name={show ? 'eye-off' : 'eye'}/></button></div></div>;
+  return <div className="auth-field"><label htmlFor={id}>{label}</label><div className="auth-input-wrap"><Icon name="lock"/><input id={id} type={show ? 'text' : 'password'} value={value} maxLength={128} autoComplete={autoComplete} onChange={event => onChange(event.target.value)} placeholder={placeholder} required={required}/><button type="button" className="auth-reveal" aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={show} onClick={() => setShow(previous => !previous)}><Icon name={show ? 'eye-off' : 'eye'}/></button></div></div>;
 }
 function EmailField({ value, onChange, autoComplete = 'email' }: { value: string; onChange: (value: string) => void; autoComplete?: string }) {
   return <div className="auth-field"><label htmlFor="auth-email">Adresse e-mail</label><div className="auth-input-wrap"><Icon name="mail"/><input id="auth-email" type="email" required maxLength={254} autoComplete={autoComplete} placeholder="exemple@domaine.fr" value={value} onChange={event => onChange(event.target.value)}/></div></div>;

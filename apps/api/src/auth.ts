@@ -28,8 +28,8 @@ export async function requireSession(request: FastifyRequest, reply: FastifyRepl
 }
 
 export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendResetMail = sendResetMail) {
-  const throttle = (max: number) => ({ config: { rateLimit: { max, timeWindow: '1 minute' } } });
-  app.post('/auth/login', throttle(10), async (request, reply) => {
+  const throttle = (groupId: string, max: number) => ({ config: { rateLimit: { groupId, max, timeWindow: '1 minute' } } });
+  app.post('/auth/login', throttle(':login', 10), async (request, reply) => {
     reply.header('cache-control', 'no-store');
     const result = loginSchema.safeParse(request.body);
     if (!result.success) return reply.code(400).send({ error: 'Invalid login data' });
@@ -65,7 +65,38 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
     return reply.code(204).send();
   });
 
-  app.post('/auth/forgot-password', throttle(5), async (request, reply) => {
+  app.post('/auth/change-password', throttle(':change-password', 5), async (request, reply) => {
+    const session = await requireSession(request, reply, db);
+    if (!session) return;
+    const parsed = z.object({
+      currentPassword: loginSchema.shape.password,
+      newPassword: passwordSchema,
+    }).strict().safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'Invalid password data' });
+    const { currentPassword, newPassword } = parsed.data;
+    if (currentPassword === newPassword) return reply.code(400).send({ error: 'Choose a different password' });
+
+    const owner = await db.owner.findUnique({ where: { id: session.ownerId }, select: { passwordHash: true } });
+    if (!owner || !await verifyPassword(currentPassword, owner.passwordHash)) {
+      return reply.code(403).send({ error: 'Incorrect current password' });
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    const changed = await db.$transaction(async tx => {
+      const updated = await tx.owner.updateMany({
+        where: { id: session.ownerId, passwordHash: owner.passwordHash },
+        data: { passwordHash },
+      });
+      if (!updated.count) return false;
+      await tx.session.deleteMany({ where: { ownerId: session.ownerId, digest: { not: session.digest } } });
+      await tx.passwordReset.deleteMany({ where: { ownerId: session.ownerId } });
+      return true;
+    });
+    if (!changed) return reply.code(403).send({ error: 'Incorrect current password' });
+    return reply.code(204).send();
+  });
+
+  app.post('/auth/forgot-password', throttle(':forgot-password', 5), async (request, reply) => {
     const parsed = z.object({ email: emailSchema }).strict().safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'Invalid email' });
     const owner = await db.owner.findUnique({ where: { email: parsed.data.email }, select: { id: true, email: true } });
@@ -80,7 +111,7 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
     return reply.code(202).send({ message: 'If the address is registered, a link will be sent' });
   });
 
-  app.post('/auth/reset-password', throttle(5), async (request, reply) => {
+  app.post('/auth/reset-password', throttle(':reset-password', 5), async (request, reply) => {
     const parsed = resetSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'Invalid password or reset token' });
     const tokenDigest = digest(parsed.data.token);
