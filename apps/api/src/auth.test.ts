@@ -18,8 +18,8 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
   const password = 'Fixture-Password42';
   const replacement = 'Replacement-Password43';
   const originalHash = await hashPassword(password);
-  let resetToken = '';
-  const app = buildApp({ mail: async (_email, token) => { resetToken = token; } });
+  const delivered: { recipient: string; token: string }[] = [];
+  const app = buildApp({ mail: async (recipient, token) => { delivered.push({ recipient, token }); } });
   try {
     await db.owner.upsert({
       where: { id: 2 }, create: { id: 2, email, firstName: 'Test', lastName: 'Owner', passwordHash: originalHash },
@@ -40,48 +40,25 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
     const requested = await forgot(email);
     assert.equal(requested.statusCode, 202);
     assert.deepEqual(requested.json(), missing.json());
-    assert.ok(resetToken);
+    assert.equal(delivered.length, 1);
+    assert.equal(delivered[0].recipient, email);
+    const requestFromProfile = () => app.inject({ method: 'POST', url: '/auth/forgot-password', headers: activeHeaders });
+    assert.equal((await app.inject({ method: 'POST', url: '/auth/forgot-password', headers, payload: {} })).statusCode, 401);
+    assert.equal((await app.inject({ method: 'POST', url: '/auth/forgot-password', headers: activeHeaders, payload: { email: 'other@example.invalid' } })).statusCode, 400);
+    assert.equal((await requestFromProfile()).statusCode, 202);
+    assert.deepEqual(delivered.map(link => link.recipient), [email, email]);
+    assert.notEqual(delivered[0].token, delivered[1].token);
+    assert.equal((await app.inject({ method: 'POST', url: '/auth/change-password', headers: activeHeaders })).statusCode, 404);
+    const resetToken = delivered[1].token;
     const reset = () => app.inject({ method: 'POST', url: '/auth/reset-password', payload: { token: resetToken, password: replacement } });
     const resets = await Promise.all([reset(), reset()]);
     assert.deepEqual(resets.map(response => response.statusCode).sort(), [204, 400]);
     assert.equal((await app.inject({ url: '/auth/me', headers: activeHeaders })).statusCode, 401);
+    assert.equal((await app.inject({ method: 'POST', url: '/auth/reset-password', payload: { token: delivered[0].token, password } })).statusCode, 400);
     assert.equal((await app.inject({ method: 'POST', url: '/auth/login', payload: { email, password: replacement } })).statusCode, 200);
   } finally {
     await db.owner.deleteMany({ where: { email } });
     await app.close();
-    await db.$disconnect();
-  }
-});
-
-test('Changing the password requires the current password and preserves only the current session', { skip: !process.env.DATABASE_URL }, async () => {
-  const db = new PrismaClient();
-  const email = 'change-password@example.invalid';
-  const original = 'Existing-Password42';
-  const replacement = 'New-Password43';
-  const app = buildApp();
-  try {
-    await db.owner.create({ data: { id: 3, email, firstName: 'Test', lastName: 'Owner', passwordHash: await hashPassword(original) } });
-    const login = (password: string) => app.inject({ method: 'POST', url: '/auth/login', payload: { email, password } });
-    const first = await login(original);
-    const second = await login(original);
-    assert.equal(first.statusCode, 200);
-    assert.equal(second.statusCode, 200);
-    const headers = { authorization: `Bearer ${first.json().accessToken}` };
-    const other = { authorization: `Bearer ${second.json().accessToken}` };
-    await db.passwordReset.create({ data: { digest: '3'.repeat(64), ownerId: 3, expiresAt: new Date(Date.now() + 60000) } });
-    const change = (currentPassword: string, authorization?: typeof headers) =>
-      app.inject({ method: 'POST', url: '/auth/change-password', headers: authorization, payload: { currentPassword, newPassword: replacement } });
-    assert.equal((await change(original)).statusCode, 401);
-    assert.equal((await change('wrong', headers)).statusCode, 403);
-    assert.equal((await change(original, headers)).statusCode, 204);
-    assert.equal((await app.inject({ url: '/auth/me', headers })).statusCode, 200);
-    assert.equal((await app.inject({ url: '/auth/me', headers: other })).statusCode, 401);
-    assert.equal(await db.passwordReset.count({ where: { ownerId: 3 } }), 0);
-    assert.equal((await login(original)).statusCode, 401);
-    assert.equal((await login(replacement)).statusCode, 200);
-  } finally {
-    await app.close();
-    await db.owner.deleteMany({ where: { email } });
     await db.$disconnect();
   }
 });

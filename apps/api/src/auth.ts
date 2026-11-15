@@ -65,48 +65,47 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
     return reply.code(204).send();
   });
 
-  app.post('/auth/change-password', throttle(':change-password', 5), async (request, reply) => {
-    const session = await requireSession(request, reply, db);
-    if (!session) return;
-    const parsed = z.object({
-      currentPassword: loginSchema.shape.password,
-      newPassword: passwordSchema,
-    }).strict().safeParse(request.body);
-    if (!parsed.success) return reply.code(400).send({ error: 'Invalid password data' });
-    const { currentPassword, newPassword } = parsed.data;
-    if (currentPassword === newPassword) return reply.code(400).send({ error: 'Choose a different password' });
+  app.post('/auth/forgot-password', throttle(':forgot-password', 5), async (request, reply) => {
+    reply.header('cache-control', 'no-store');
+    const prepareLink = async (owner: { id: number; email: string }) => {
+      const token = newToken();
+      const tokenDigest = digest(token);
+      await db.$transaction([
+        db.passwordReset.deleteMany({ where: { ownerId: owner.id, expiresAt: { lte: new Date() } } }),
+        db.passwordReset.create({ data: { digest: tokenDigest, ownerId: owner.id, expiresAt: new Date(Date.now() + 30 * 60 * 1000) } }),
+      ]);
+      return async () => {
+        try {
+          await mail(owner.email, token);
+        } catch (error) {
+          await db.passwordReset.deleteMany({ where: { digest: tokenDigest } });
+          throw error;
+        }
+      };
+    };
 
-    const owner = await db.owner.findUnique({ where: { id: session.ownerId }, select: { passwordHash: true } });
-    if (!owner || !await verifyPassword(currentPassword, owner.passwordHash)) {
-      return reply.code(403).send({ error: 'Incorrect current password' });
+    if (request.headers.authorization !== undefined) {
+      const session = await requireSession(request, reply, db);
+      if (!session) return;
+      if (!z.object({}).strict().safeParse(request.body ?? {}).success) {
+        return reply.code(400).send({ error: 'Invalid reset request' });
+      }
+      try {
+        const sendLink = await prepareLink({ id: session.ownerId, email: session.owner.email });
+        await sendLink();
+      } catch {
+        request.log.error('Password reset email delivery failed');
+        return reply.code(503).send({ error: 'Password reset email unavailable' });
+      }
+      return reply.code(202).send({ message: 'Reset email sent' });
     }
 
-    const passwordHash = await hashPassword(newPassword);
-    const changed = await db.$transaction(async tx => {
-      const updated = await tx.owner.updateMany({
-        where: { id: session.ownerId, passwordHash: owner.passwordHash },
-        data: { passwordHash },
-      });
-      if (!updated.count) return false;
-      await tx.session.deleteMany({ where: { ownerId: session.ownerId, digest: { not: session.digest } } });
-      await tx.passwordReset.deleteMany({ where: { ownerId: session.ownerId } });
-      return true;
-    });
-    if (!changed) return reply.code(403).send({ error: 'Incorrect current password' });
-    return reply.code(204).send();
-  });
-
-  app.post('/auth/forgot-password', throttle(':forgot-password', 5), async (request, reply) => {
     const parsed = z.object({ email: emailSchema }).strict().safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'Invalid email' });
     const owner = await db.owner.findUnique({ where: { email: parsed.data.email }, select: { id: true, email: true } });
     if (owner) {
-      const token = newToken();
-      await db.$transaction([
-        db.passwordReset.deleteMany({ where: { ownerId: owner.id, expiresAt: { lte: new Date() } } }),
-        db.passwordReset.create({ data: { digest: digest(token), ownerId: owner.id, expiresAt: new Date(Date.now() + 30 * 60 * 1000) } }),
-      ]);
-      void mail(owner.email, token).catch(() => request.log.error('Password reset email delivery failed'));
+      const sendLink = await prepareLink(owner);
+      void sendLink().catch(() => request.log.error('Password reset email delivery failed'));
     }
     return reply.code(202).send({ message: 'If the address is registered, a link will be sent' });
   });
