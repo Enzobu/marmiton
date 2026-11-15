@@ -1,0 +1,19 @@
+meta {
+  name: GET /me/recipe-notes/00000000-0000-4000-8000-999999999999 (notes-missing-recipe)
+  type: http
+  seq: 26
+}
+
+get {
+  url: {{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-999999999999
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 404", () => expect(res.getStatus()).to.equal(404));
+}

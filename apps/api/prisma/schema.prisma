@@ -30,6 +30,8 @@ model Recipe {
   ingredients  RecipeIngredient[]
   steps        RecipeStep[]
   favorites    Favorite[]
+  plannedMeals PlannedMeal[]
+  notes        RecipeNote[]
 
   @@index([isPublic, category, totalMinutes])
 }
@@ -68,6 +70,9 @@ model Owner {
   sessions     Session[]
   favorites    Favorite[]
   resets       PasswordReset[]
+  shoppingItems ShoppingItem[]
+  plannedMeals  PlannedMeal[]
+  recipeNotes   RecipeNote[]
 }
 
 model Session {
@@ -97,4 +102,39 @@ model Favorite {
 
   @@id([ownerId, recipeId])
   @@index([ownerId, createdAt])
+}
+
+model ShoppingItem {
+  id        String   @id @default(uuid()) @db.Char(36)
+  ownerId   Int
+  name      String   @db.VarChar(160)
+  unit      String?  @db.VarChar(30)
+  amount    Decimal? @db.Decimal(30, 12)
+  checked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+}
+
+model PlannedMeal {
+  id       String   @id @default(uuid()) @db.Char(36)
+  ownerId  Int
+  recipeId String   @db.Char(36)
+  date     DateTime @db.Date
+  servings Int
+  owner    Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, date])
+}
+
+model RecipeNote {
+  ownerId  Int
+  recipeId String @db.Char(36)
+  note     String @db.Text
+  owner    Owner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, recipeId])
 }

@@ -1,0 +1,23 @@
+meta {
+  name: PATCH /me/shopping-list/00000000-0000-4000-8000-999999999999 (shopping-missing-item)
+  type: http
+  seq: 11
+}
+
+patch {
+  url: {{baseUrl}}/me/shopping-list/00000000-0000-4000-8000-999999999999
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"checked": true}
+}
+
+tests {
+  test("HTTP 404", () => expect(res.getStatus()).to.equal(404));
+}

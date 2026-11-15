@@ -1,0 +1,23 @@
+meta {
+  name: PATCH /me/shopping-list/{{planningItem}} (shopping-check)
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/me/shopping-list/{{planningItem}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"checked": true}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

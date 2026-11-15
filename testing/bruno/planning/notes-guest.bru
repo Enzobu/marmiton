@@ -1,0 +1,15 @@
+meta {
+  name: GET /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-guest)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

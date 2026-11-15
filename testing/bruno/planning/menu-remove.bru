@@ -1,0 +1,19 @@
+meta {
+  name: DELETE /me/weekly-menu/{{plannedMeal}} (menu-remove)
+  type: http
+  seq: 24
+}
+
+delete {
+  url: {{baseUrl}}/me/weekly-menu/{{plannedMeal}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}
