@@ -92,7 +92,11 @@ jobs:
       - name: Validate root Docker Compose
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
       - name: Build frontend and API images
-        run: docker compose --env-file .env.example -f docker-compose.yml build web api
+        run: |
+          mkdir -p volumes/mariadb/marmiton
+          chmod 000 volumes/mariadb/marmiton
+          trap 'chmod 700 volumes/mariadb/marmiton' EXIT
+          docker compose --env-file .env.example -f docker-compose.yml build web api
       - name: Verify proxy, CORS and real SHA from the API image
         run: |
           export DB_NAME=marmiton_test DB_USER=marmiton DB_PASSWORD=fixture-password DB_ROOT_PASSWORD=isolated-ci-root-fixture

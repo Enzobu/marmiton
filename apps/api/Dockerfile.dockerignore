@@ -12,3 +12,6 @@
 **/.git/hooks
 **/.git/logs
 **/.git/objects/info/alternates
+
+# Local MariaDB and upload bind mounts
+/volumes/
