@@ -53,9 +53,9 @@ export function ConfirmDialog({ title, description, confirmLabel, onConfirm, onC
 export function NotFoundPage({ navigate }: { navigate: (path: string) => void }) {
   return <main className="ui-not-found">
     <div className="ui-not-found-illustration" aria-hidden="true">404</div>
-    <span className="section-kicker">La recette s'est échappée</span>
-    <h1>Oups, cette page n'est pas au menu.</h1>
-    <p>Le lien est peut-être incorrect ou la recette a disparu. Il reste plein de bonnes choses à découvrir !</p>
+    <span className="section-kicker">Erreur 404</span>
+    <h1>Page introuvable</h1>
+    <p>Le lien est peut-être incorrect ou la recette n’est plus disponible.</p>
     <div><button className="account-primary" onClick={() => navigate('/recipes')}>Explorer les recettes</button><button className="ui-not-found-home" onClick={() => navigate('/')}>Retour à l'accueil</button></div>
   </main>;
 }

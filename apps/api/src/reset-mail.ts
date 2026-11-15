@@ -15,12 +15,12 @@ export function renderResetMail(publicUrl: string, token: string, theme: ResetMa
   url.hash = new URLSearchParams({ token }).toString();
   const link = url.href.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
   const colors = palette[theme];
-  const intro = 'Utilise ce lien dans les 30 minutes pour choisir un nouveau mot de passe.';
-  const footer = 'Si tu n’as rien demandé, tu peux ignorer cet e-mail.';
-  const heading = 'Réinitialise ton mot de passe';
+  const intro = 'Ce lien est valable 30 minutes et permet de définir un nouveau mot de passe.';
+  const footer = 'Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer cet e-mail.';
+  const heading = 'Réinitialisation du mot de passe';
 
   return {
-    subject: 'Réinitialiser ton mot de passe · Les petits plats',
+    subject: 'Réinitialisation du mot de passe · Les petits plats',
     text: `Les petits plats\n\n${heading}\n\n${intro}\n${url.href}\n\n${footer}`,
     html: `<!doctype html>
 <html lang="fr">

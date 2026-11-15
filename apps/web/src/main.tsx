@@ -316,7 +316,7 @@ function App() {
       notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) invalidateSession();
-      notify('Impossible de mettre à jour tes favoris.', 'error');
+      notify('Impossible de mettre à jour les favoris.', 'error');
     } finally { favoriteUpdate.current = false; }
   };
 
@@ -343,7 +343,7 @@ function App() {
       if (accessToken) await apiRequest('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 401)) {
-        notify('Impossible de fermer la session. Réessaie.', 'error');
+        notify('Impossible de fermer la session. Veuillez réessayer.', 'error');
         return;
       }
     }
@@ -386,17 +386,17 @@ function App() {
       {isHome && <>
       <section className="hero">
         <div className="hero-inner">
-          <div className="hero-copy"><span className="eyebrow"><span className="eyebrow-line"/> La cuisine qui rassemble</span><h1>Chaque recette<br/>a sa petite <em>histoire.</em></h1><p>Des idées gourmandes, des recettes testées et surtout beaucoup de plaisir à cuisiner. Qu'est-ce qu'on prépare aujourd'hui ?</p>
-            <form className="hero-search" onSubmit={event => { event.preventDefault(); navigate('/recipes'); }}><Icon name="search" size={23}/><label className="sr-only" htmlFor="recipe-search">Chercher une recette ou un ingrédient</label><input id="recipe-search" value={search} onChange={event => { setSearch(event.target.value); setShowAll(true); }} placeholder="Une recette, un ingrédient..." /><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form>
-            <div className="popular-searches"><strong>À essayer :</strong><button onClick={() => { setSearch('chocolat'); setShowAll(true); navigate('/recipes'); }}>Chocolat</button><button onClick={() => { setSearch('poulet'); setShowAll(true); navigate('/recipes'); }}>Poulet</button><button onClick={() => { setSearch('pâtes'); setShowAll(true); navigate('/recipes'); }}>Pâtes</button></div>
+          <div className="hero-copy"><span className="eyebrow"><span className="eyebrow-line"/> La cuisine qui rassemble</span><h1>Le carnet de<br/> <em>recettes maison</em></h1><p>Recherchez une recette par nom ou par ingrédient, ou parcourez le catalogue par catégorie.</p>
+            <form className="hero-search" onSubmit={event => { event.preventDefault(); navigate('/recipes'); }}><Icon name="search" size={23}/><label className="sr-only" htmlFor="recipe-search">Rechercher une recette ou un ingrédient</label><input id="recipe-search" value={search} onChange={event => { setSearch(event.target.value); setShowAll(true); }} placeholder="Nom de recette ou ingrédient" /><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form>
+            <div className="popular-searches"><strong>Suggestions</strong><button onClick={() => { setSearch('chocolat'); setShowAll(true); navigate('/recipes'); }}>Chocolat</button><button onClick={() => { setSearch('poulet'); setShowAll(true); navigate('/recipes'); }}>Poulet</button><button onClick={() => { setSearch('pâtes'); setShowAll(true); navigate('/recipes'); }}>Pâtes</button></div>
           </div>
           <div className="hero-visual"><img src="https://images.unsplash.com/photo-1547592180-85f173990554?w=1300&q=90" alt="Plat gourmand à partager" /><div className="hero-stamp"><span>Fait avec</span><Icon name="heart" size={28}/><span>à la maison</span></div></div>
         </div>
       </section>
-      <section className="categories-section section-container" aria-labelledby="categories-title"><div className="section-heading"><div><span className="section-kicker">Une envie particulière ?</span><h2 id="categories-title">Qu'est-ce qui te ferait plaisir ?</h2></div><p>Il y a toujours une bonne raison de se régaler.</p></div><div className="category-grid">{categories.slice(1).map(item => <button key={item} className={`category-tile ${category === item && !onlyFavorites ? 'selected' : ''}`} onClick={() => chooseCategory(item)}><span className="category-emoji" aria-hidden="true">{categoryInitials[item]}</span><span>{item}</span><Icon name="arrow" size={17}/></button>)}</div></section></>}
-      {isCatalog && <section className="catalog-intro"><span className="section-kicker">Toutes les bonnes idées</span><h1>À chaque envie, sa recette.</h1><p>Un petit creux, une grande occasion ou simplement envie de cuisiner ? Explore notre carnet et trouve de quoi régaler tout le monde.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Chercher une recette</label><input id="catalog-search" placeholder="Une recette, un ingrédient..." value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form></section>}
-      {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Des idées pour se régaler'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Nos recettes à découvrir' : category}</h2></div><span className="recipe-count">{total} recette{total > 1 ? 's' : ''}</span></div>
-        <div className="filter-bar"><div className="filter-chips" role="group" aria-label="Filtrer les recettes"><button className={category === 'Toutes les recettes' && !onlyFavorites ? 'active' : ''} onClick={() => { setOnlyFavorites(false); setCategory('Toutes les recettes'); }}>Tout voir</button>{categories.slice(1).map(item => <button key={item} className={!onlyFavorites && category === item ? 'active' : ''} onClick={() => { setCategory(item); setOnlyFavorites(false); }}>{item}</button>)}<button className={onlyFavorites ? 'active' : ''} onClick={openFavorites}><Icon name="heart" size={14}/>Favoris</button></div><span className="filter-caption"><Icon name="sliders" size={17}/> Trouve ton bonheur</span></div>
+      <section className="categories-section section-container" aria-labelledby="categories-title"><div className="section-heading"><div><span className="section-kicker">Catalogue</span><h2 id="categories-title">Explorer par catégorie</h2></div><p>Entrées, plats, desserts et petits-déjeuners.</p></div><div className="category-grid">{categories.slice(1).map(item => <button key={item} className={`category-tile ${category === item && !onlyFavorites ? 'selected' : ''}`} onClick={() => chooseCategory(item)}><span className="category-emoji" aria-hidden="true">{categoryInitials[item]}</span><span>{item}</span><Icon name="arrow" size={17}/></button>)}</div></section></>}
+      {isCatalog && <section className="catalog-intro"><span className="section-kicker">Catalogue</span><h1>Toutes les recettes</h1><p>Filtrez les recettes par catégorie, difficulté, durée ou budget.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Rechercher une recette</label><input id="catalog-search" placeholder="Nom de recette ou ingrédient" value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form></section>}
+      {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Catalogue'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Recettes à découvrir' : category}</h2></div><span className="recipe-count">{total} recette{total > 1 ? 's' : ''}</span></div>
+        <div className="filter-bar"><div className="filter-chips" role="group" aria-label="Filtrer les recettes"><button className={category === 'Toutes les recettes' && !onlyFavorites ? 'active' : ''} onClick={() => { setOnlyFavorites(false); setCategory('Toutes les recettes'); }}>Tout voir</button>{categories.slice(1).map(item => <button key={item} className={!onlyFavorites && category === item ? 'active' : ''} onClick={() => { setCategory(item); setOnlyFavorites(false); }}>{item}</button>)}<button className={onlyFavorites ? 'active' : ''} onClick={openFavorites}><Icon name="heart" size={14}/>Favoris</button></div><span className="filter-caption"><Icon name="sliders" size={17}/> Catégories de recettes</span></div>
         {isCatalog && <div className="advanced-search-panel" role="group" aria-label="Filtres avancés">
           <label>Difficulté<select value={difficultyFilter} onChange={event => setDifficultyFilter(event.target.value as CatalogFilters['difficulty'])}><option value="">Toutes</option><option value="Facile">Facile</option><option value="Moyen">Moyen</option></select></label>
           <label>Durée totale<select value={maxTimeFilter ?? ''} onChange={event => setMaxTimeFilter(event.target.value ? Number(event.target.value) : null)}><option value="">Toutes</option><option value="15">15 min max</option><option value="30">30 min max</option><option value="45">45 min max</option><option value="60">1 h max</option><option value="90">1 h 30 max</option><option value="120">2 h max</option></select></label>
@@ -404,14 +404,14 @@ function App() {
           <label>Trier par<select value={sortFilter} onChange={event => setSortFilter(event.target.value as CatalogSort)}><option value="relevance">Par défaut</option><option value="popular">Plus populaires</option><option value="rating">Mieux notées</option><option value="prep">Préparation rapide</option><option value="time">Durée totale</option></select></label>
           {hasCatalogFilters && <button type="button" className="advanced-reset" onClick={resetAdvancedFilters}>Effacer les filtres</button>}
         </div>}
-        {!currentCatalog ? <p role="status">Chargement des recettes…</p> : currentCatalog.error ? <p role="alert">Impossible de charger les recettes.</p> : visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essaie une autre recherche ou modifie tes filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
+        {!currentCatalog ? <p role="status">Chargement des recettes…</p> : currentCatalog.error ? <p role="alert">Impossible de charger les recettes.</p> : visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essayez une autre recherche ou modifiez les filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
         {isHome && total > visible.length && <div className="see-more"><button onClick={() => navigate('/recipes')}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
         {isCatalog && currentCatalog?.data && (catalogPage > 1 || total > catalogPage * currentCatalog.data.limit) && <div className="see-more">
           <button disabled={catalogPage === 1} onClick={() => setCatalogPage(page => page - 1)}>Précédent</button>
           <button disabled={total <= catalogPage * currentCatalog.data.limit} onClick={() => setCatalogPage(page => page + 1)}>Suivant</button>
         </div>}
       </section>}
-      {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
+      {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Carnet de recettes</span><h2>Ajoutez une recette à votre carnet</h2><p>Enregistrez les ingrédients et les étapes de préparation pour retrouver la recette à tout moment.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>}
     {selectedRecipe && <RecipeDetail token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
@@ -424,15 +424,15 @@ function App() {
       navigate('/');
     }}/>}
     {accountRoute && sessionPending && <p role="status">Vérification de la connexion…</p>}
-    {accountRoute && sessionError && <p role="alert">Impossible de vérifier la connexion. Recharge la page.</p>}
+    {accountRoute && sessionError && <p role="alert">Impossible de vérifier la connexion. Rechargez la page.</p>}
     {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={favoriteRecipes} token={accessToken} favoritesPending={favoritesPending} favoritesError={favoritesError} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={saveProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
-    {editorialLoading && <p className="section-container" role="status">Chargement de tes recettes…</p>}
-    {needsOwnedRecipes && ownedRecipesError && <p className="section-container" role="alert">Impossible de charger tes recettes.</p>}
+    {editorialLoading && <p className="section-container" role="status">Chargement de vos recettes…</p>}
+    {needsOwnedRecipes && ownedRecipesError && <p className="section-container" role="alert">Impossible de charger vos recettes.</p>}
     {detailLoading && <p className="section-container" role="status">Chargement de la recette…</p>}
     {currentDetail?.error && <p className="section-container" role="alert">Impossible de charger la recette.</p>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}
     <ToastRegion toast={toast} onDismiss={() => setToast(null)}/>
-    <footer className="site-footer"><div><span className="footer-brand">Les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
+    <footer className="site-footer"><div><span className="footer-brand">Les petits<span>plats.</span></span><p>Carnet de recettes maison.</p></div><span>Recettes, ingrédients et préparation</span></footer>
 
   </>;
 }

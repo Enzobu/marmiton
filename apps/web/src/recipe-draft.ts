@@ -45,7 +45,7 @@ export function clearDraft() {
 }
 
 export function validateRecipeImage(file: File): string | null {
-  if (!ACCEPTED_RECIPE_IMAGE_TYPES.some(type => type === file.type)) return 'Choisis une image JPG, PNG ou WebP.';
+  if (!ACCEPTED_RECIPE_IMAGE_TYPES.some(type => type === file.type)) return 'Sélectionnez une image JPG, PNG ou WebP.';
   if (file.size > MAX_RECIPE_IMAGE_SIZE) return 'La photo ne doit pas dépasser 2 Mo.';
   return null;
 }
