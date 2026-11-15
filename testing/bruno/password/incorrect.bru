@@ -1,0 +1,26 @@
+meta {
+  name: POST /auth/change-password (incorrect)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/auth/change-password
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "currentPassword": "wrong",
+    "newPassword": "Changed-Password43"
+  }
+}
+
+tests {
+  test("HTTP 403", () => expect(res.getStatus()).to.equal(403));
+}

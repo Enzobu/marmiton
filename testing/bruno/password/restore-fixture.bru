@@ -1,0 +1,26 @@
+meta {
+  name: POST /auth/change-password (restore-fixture)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/auth/change-password
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "currentPassword": "Changed-Password43",
+    "newPassword": "Fixture-Password42"
+  }
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

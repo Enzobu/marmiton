@@ -3,6 +3,7 @@ import { formatTime, recipePath, type Recipe } from './recipe-data';
 import { ConfirmDialog } from './UiFeedback';
 import { useAuthenticatedImage } from './useAuthenticatedImage';
 import { validateRecipeImage } from './recipe-draft';
+import { AccountPassword } from './AccountPassword';
 import './account.css';
 
 export type Profile = { firstName: string; lastName: string; email: string; avatar?: string | null; bio: string; newsletter: boolean; publicRecipes: boolean };
@@ -124,10 +125,10 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
               {photoError && <p role="alert" className="account-error">{photoError}</p>}
               <div className="account-form-grid"><label>Prénom<input required maxLength={70} autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)}/></label><label>Nom<input required maxLength={70} autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)}/></label><label className="account-field-wide">Adresse e-mail<input type="email" readOnly value={profile.email}/><small>L'email sera modifiable après vérification via l'API.</small></label><label className="account-field-wide">Quelques mots sur toi<textarea maxLength={300} rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="Ce que tu aimes cuisiner..."/></label></div>
               <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Mode développeur</strong><small>Affiche les outils d'import/export JSON dans l'éditeur de recettes.</small></span><span className="developer-mode-switch"><input type="checkbox" aria-label="Mode développeur" checked={developerMode} onChange={event => onDeveloperModeChange(event.target.checked)}/><span className="developer-mode-track" aria-hidden="true"/></span></label><label><span><strong>Recevoir les actualités</strong><small>Enregistre ton choix pour les actualités.</small></span><input type="checkbox" checked={newsletter} onChange={event => setNewsletter(event.target.checked)}/></label><label><span><strong>Recettes publiques</strong><small>Visibilité proposée par défaut pour les nouvelles recettes.</small></span><input type="checkbox" checked={publicRecipes} onChange={event => setPublicRecipes(event.target.checked)}/></label></div>
-              <div className="account-security"><div><h3>Sécurité du compte</h3><p>Modification du mot de passe et suppression du compte seront disponibles lorsque l'API sera branchée.</p></div><button type="button" disabled title="Disponible après l'intégration de l'API">Modifier mon mot de passe</button></div>
               {notice && <p role="status" className="account-success">{notice}</p>}
               <div className="account-form-actions"><button className="account-primary" type="submit" disabled={saving}>Enregistrer les modifications</button></div>
             </form>
+            <AccountPassword token={token} navigate={navigate}/>
           </>}
           {page !== 'profile' && <>
             <div className="account-section-header"><div><span className="section-kicker">{page === 'favorites' ? 'Ma sélection' : 'Ma cuisine'}</span><h2>{page === 'favorites' ? 'Mes favoris' : 'Mes recettes'}</h2></div>{page === 'my-recipes' && <button className="account-primary" onClick={() => navigate('/recipes/new')}>+ Nouvelle recette</button>}</div>
