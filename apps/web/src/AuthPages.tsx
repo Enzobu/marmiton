@@ -22,9 +22,9 @@ export const passwordChecks = (password: string) => ({
 });
 export const isPasswordValid = (password: string) => password.length <= 128 && Object.values(passwordChecks(password)).every(Boolean);
 const titleByPage: Record<AuthProps['page'], string> = {
-  login: 'Heureux de te retrouver.',
-  forgot: 'Retrouvons ton compte.',
-  reset: 'Un nouveau départ.'
+  login: 'Connexion',
+  forgot: 'Mot de passe oublié',
+  reset: 'Réinitialisation du mot de passe'
 };
 
 type IconName = 'eye' | 'eye-off' | 'mail' | 'lock' | 'arrow' | 'check' | 'back' | 'user' | 'shield' | 'chef';
@@ -72,11 +72,11 @@ export function AuthPage({ page, navigate, onLogin, onReset, sessionPending, sig
     event.preventDefault();
     if (busy) return;
     if (page === 'reset' && (!isPasswordValid(password) || confirm !== password)) {
-      inform('Vérifie les critères du mot de passe et sa confirmation.', 'error');
+      inform('Vérifiez que le mot de passe respecte les critères et que la confirmation est identique.', 'error');
       return;
     }
     if (page === 'reset' && !hasResetToken) {
-      inform('Ce lien est invalide. Demande un nouveau lien.', 'error');
+      inform('Ce lien est invalide. Veuillez demander un nouveau lien.', 'error');
       return;
     }
     setBusy(true);
@@ -84,7 +84,7 @@ export function AuthPage({ page, navigate, onLogin, onReset, sessionPending, sig
     try {
       if (page === 'forgot') {
         await requestPasswordReset({ email });
-        inform('Si l’adresse est associée à ton compte, tu recevras un lien de réinitialisation.');
+        inform('Si cette adresse est associée à un compte, un lien de réinitialisation vous sera envoyé.');
       } else {
         const result = await apiRequest<LoginResult>(page === 'login' ? '/auth/login' : '/auth/reset-password', {
           method: 'POST',
@@ -96,10 +96,10 @@ export function AuthPage({ page, navigate, onLogin, onReset, sessionPending, sig
       }
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 0;
-      inform(status === 429 ? 'Trop de tentatives. Réessaie dans une minute.'
+      inform(status === 429 ? 'Trop de tentatives. Réessayez dans une minute.'
         : page === 'login' && status === 401 ? 'Adresse e-mail ou mot de passe incorrect.'
         : page === 'reset' && status === 400 ? 'Ce lien a expiré ou a déjà été utilisé.'
-        : 'Impossible de terminer cette demande. Réessaie.', 'error');
+        : 'Impossible de traiter la demande. Veuillez réessayer.', 'error');
     } finally { setBusy(false); }
   };
 
@@ -108,20 +108,20 @@ export function AuthPage({ page, navigate, onLogin, onReset, sessionPending, sig
       <section className="auth-card" aria-labelledby="auth-title">
         <RouteLink to="/" navigate={navigate} className="auth-back"><Icon name="back" size={16}/> Retour à l’accueil</RouteLink>
         <div className="auth-mark"><Icon name={page === 'forgot' || page === 'reset' ? 'lock' : 'chef'} size={27}/></div>
-        <span className="section-kicker">{page === 'login' ? 'Ton espace gourmand' : 'Sécurité du compte'}</span>
+        <span className="section-kicker">{page === 'login' ? 'Espace personnel' : 'Sécurité du compte'}</span>
         <h1 id="auth-title">{titleByPage[page]}</h1>
-        <p className="auth-lead">{page === 'login' ? 'Connecte-toi pour retrouver tes bonnes idées et tes recettes préférées.' : page === 'forgot' ? 'Renseigne ton adresse e-mail pour recevoir un lien de réinitialisation.' : 'Choisis un mot de passe solide pour protéger ton compte.'}</p>
+        <p className="auth-lead">{page === 'login' ? 'Connectez-vous pour accéder à vos recettes et à vos favoris.' : page === 'forgot' ? 'Saisissez l’adresse e-mail de votre compte pour recevoir un lien de réinitialisation.' : 'Définissez un nouveau mot de passe pour votre compte.'}</p>
 
         {page === 'reset' && !hasResetToken ? <div className="auth-alert" role="status">
-          Ouvre le lien de réinitialisation reçu par e-mail. <RouteLink to="/forgot-password" navigate={navigate}>Demander un lien</RouteLink>
+          Ouvrez le lien de réinitialisation reçu par e-mail. <RouteLink to="/forgot-password" navigate={navigate}>Demander un lien</RouteLink>
         </div> : <form className="auth-form" onSubmit={submit}>
           {(page === 'login' || page === 'forgot') && <EmailField value={email} onChange={setEmail}/>}
-          {(page === 'login' || page === 'reset') && <PasswordField id="auth-password" label={page === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'} value={password} onChange={setPassword} autoComplete={page === 'login' ? 'current-password' : 'new-password'} placeholder={page === 'login' ? 'Ton mot de passe' : 'Au moins 12 caractères'}/>}
+          {(page === 'login' || page === 'reset') && <PasswordField id="auth-password" label={page === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'} value={password} onChange={setPassword} autoComplete={page === 'login' ? 'current-password' : 'new-password'} placeholder={page === 'login' ? 'Mot de passe' : 'Au moins 12 caractères'}/>}
           {(page === 'reset') && <>
             <div className="auth-password-rules" aria-label="Critères du mot de passe">
               {([['length','12 caractères minimum'],['lower','Une minuscule'],['upper','Une majuscule'],['digit','Un chiffre'],['special','Un caractère spécial']] as const).map(([key,label]) => <span key={key} className={checks[key] ? 'valid' : ''}><Icon name="check" size={13}/>{label}</span>)}
             </div>
-            <PasswordField id="auth-confirm" label="Confirmer le mot de passe" value={confirm} onChange={setConfirm} autoComplete="new-password" placeholder="Répète ton mot de passe"/>
+            <PasswordField id="auth-confirm" label="Confirmer le mot de passe" value={confirm} onChange={setConfirm} autoComplete="new-password" placeholder="Confirmez le mot de passe"/>
           </>}
           {page === 'login' && <div className="auth-form-options"><label className="auth-checkbox"><input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)}/>Se souvenir de moi</label><RouteLink navigate={navigate} to="/forgot-password">Mot de passe oublié ?</RouteLink></div>}
           {feedback && <div className={`auth-alert ${feedbackType === 'error' ? 'auth-alert-error' : ''}`} role={feedbackType === 'error' ? 'alert' : 'status'}>{feedback}</div>}
@@ -138,8 +138,8 @@ export function AuthPage({ page, navigate, onLogin, onReset, sessionPending, sig
         <div className="auth-story-content">
           <div className="auth-story-badge"><Icon name="chef" size={18}/> Les petits plats</div>
           <span className="auth-story-eyebrow">La cuisine qui rassemble</span>
-          <h2>Les meilleures recettes sont celles qu’on partage.</h2>
-          <p>Un carnet gourmand, des idées pour tous les jours et plein de souvenirs à cuisiner.</p>
+          <h2>Votre carnet de recettes</h2>
+          <p>Créez vos recettes et retrouvez vos favoris dans un même espace.</p>
           <div className="auth-story-dots"><span/><span/><span/></div>
         </div>
       </aside>

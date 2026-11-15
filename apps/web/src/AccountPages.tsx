@@ -48,8 +48,8 @@ function InitialAvatar({ profile, large = false }: { profile: Profile; large?: b
 function EmptyContent({ kind, navigate }: { kind: 'favorites' | 'my-recipes'; navigate: Props['navigate'] }) {
   return <div className="account-empty">
     <span className="account-empty-illustration" aria-hidden="true">{kind === 'favorites' ? '♡' : '+'}</span>
-    <h2>{kind === 'favorites' ? 'Pas encore de recettes favorites' : 'Ton carnet attend sa première recette'}</h2>
-    <p>{kind === 'favorites' ? 'Explore le catalogue et garde tes découvertes gourmandes ici.' : 'C’est le moment d’ajouter une recette dont tu es fier.'}</p>
+    <h2>{kind === 'favorites' ? 'Pas encore de recettes favorites' : 'Aucune recette enregistrée'}</h2>
+    <p>{kind === 'favorites' ? 'Ajoutez des recettes à vos favoris depuis le catalogue.' : 'Les recettes que vous créez apparaîtront dans cet espace.'}</p>
     <button className="account-primary" onClick={() => navigate(kind === 'favorites' ? '/recipes' : '/recipes/new')}>{kind === 'favorites' ? 'Explorer les recettes' : 'Créer une recette'}</button>
   </div>;
 }
@@ -78,7 +78,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
 
   const requireProfile = page !== 'favorites';
   if (!profile && requireProfile) {
-    return <main className="account-guest"><span className="section-kicker">Ton espace personnel</span><h1>Connecte-toi pour continuer</h1><p>Connecte-toi pour accéder à ton espace personnel.</p><button className="account-primary" onClick={() => navigate('/login')}>Découvrir la connexion</button></main>;
+    return <main className="account-guest"><span className="section-kicker">Espace personnel</span><h1>Connexion requise</h1><p>Connectez-vous pour accéder à votre espace personnel.</p><button className="account-primary" onClick={() => navigate('/login')}>Se connecter</button></main>;
   }
 
   const source = page === 'favorites' ? recipes.filter(recipe => favorites.includes(recipe.id)) : myRecipes;
@@ -104,14 +104,14 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
       const updated = await onProfileChange({ ...profile, firstName: firstName.trim(), lastName: lastName.trim(), bio: bio.trim(), avatar: avatar || null, newsletter, publicRecipes });
       setAvatar(updated.avatar ?? '');
       setNotice('Profil enregistré.');
-    } catch { setSaveError('Impossible d’enregistrer ton profil.'); }
+    } catch { setSaveError('Impossible d’enregistrer le profil.'); }
     finally { setSaving(false); }
   };
 
   return <main className="account-page">
     <div className="account-container">
       <nav className="breadcrumbs" aria-label="Fil d’Ariane"><NavLink to="/" navigate={navigate}>Accueil</NavLink><span>/</span><span aria-current="page">{links.find(link => link.page === page)?.label}</span></nav>
-      <div className="account-heading"><span className="section-kicker">Mon espace gourmand</span><h1>{page === 'profile' ? 'Un profil qui te ressemble.' : page === 'my-recipes' ? 'Mes recettes maison.' : 'Mes coups de cœur.'}</h1><p>{page === 'profile' ? 'Personnalise ton espace et les informations de ton compte.' : page === 'my-recipes' ? 'Retrouve, modifie et partage tes créations culinaires.' : 'Toutes les bonnes idées que tu as envie de retrouver.'}</p></div>
+      <div className="account-heading"><span className="section-kicker">Espace personnel</span><h1>{page === 'profile' ? 'Mon profil' : page === 'my-recipes' ? 'Mes recettes' : 'Mes favoris'}</h1><p>{page === 'profile' ? 'Gérez les informations et les préférences de votre compte.' : page === 'my-recipes' ? 'Consultez et modifiez vos recettes.' : 'Consultez les recettes ajoutées à vos favoris.'}</p></div>
       <div className="account-layout">
         <aside className="account-sidebar">
           {profile && <div className="account-sidebar-user"><InitialAvatar profile={{...profile, avatar: sidebarAvatar}}/><div><strong>{profile.firstName} {profile.lastName}</strong><span>{profile.email}</span></div></div>}
@@ -124,8 +124,8 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
               <div className="account-photo-control"><span className="account-avatar-frame"><InitialAvatar profile={{...profile,avatar: resolvedAvatar || undefined}} large/></span><div><strong>Photo de profil</strong><p>JPG, PNG ou WebP, 2 Mo maximum.</p><label className="account-upload-label" htmlFor="account-avatar-file">Choisir une photo</label><input id="account-avatar-file" className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto}/>{avatar && <button type="button" className="account-text-button" onClick={() => setAvatar('')}>Supprimer la photo</button>}</div></div>
               {saveError && <p role="alert" className="account-error">{saveError}</p>}
               {photoError && <p role="alert" className="account-error">{photoError}</p>}
-              <div className="account-form-grid"><label>Prénom<input required maxLength={70} autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)}/></label><label>Nom<input required maxLength={70} autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)}/></label><label className="account-field-wide">Adresse e-mail<input type="email" readOnly value={profile.email}/><small>L'email sera modifiable après vérification via l'API.</small></label><label className="account-field-wide">Quelques mots sur toi<textarea maxLength={300} rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="Ce que tu aimes cuisiner..."/></label></div>
-              <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Mode développeur</strong><small>Affiche les outils d'import/export JSON dans l'éditeur de recettes.</small></span><ToggleSwitch label="Mode développeur" checked={developerMode} onChange={onDeveloperModeChange}/></label><label><span><strong>Recevoir les actualités</strong><small>Enregistre ton choix pour les actualités.</small></span><ToggleSwitch label="Recevoir les actualités" checked={newsletter} onChange={setNewsletter}/></label><label><span><strong>Recettes publiques</strong><small>Visibilité proposée par défaut pour les nouvelles recettes.</small></span><ToggleSwitch label="Recettes publiques" checked={publicRecipes} onChange={setPublicRecipes}/></label></div>
+              <div className="account-form-grid"><label>Prénom<input required maxLength={70} autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)}/></label><label>Nom<input required maxLength={70} autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)}/></label><label className="account-field-wide">Adresse e-mail<input type="email" readOnly value={profile.email}/><small>Adresse de connexion et de réinitialisation du mot de passe.</small></label><label className="account-field-wide">Biographie<textarea maxLength={300} rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="Par exemple, vos spécialités culinaires"/></label></div>
+              <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Mode développeur</strong><small>Affiche les outils d'import/export JSON dans l'éditeur de recettes.</small></span><ToggleSwitch label="Mode développeur" checked={developerMode} onChange={onDeveloperModeChange}/></label><label><span><strong>Recevoir les actualités</strong><small>Préférence de réception des actualités.</small></span><ToggleSwitch label="Recevoir les actualités" checked={newsletter} onChange={setNewsletter}/></label><label><span><strong>Recettes publiques</strong><small>Visibilité proposée par défaut pour les nouvelles recettes.</small></span><ToggleSwitch label="Recettes publiques" checked={publicRecipes} onChange={setPublicRecipes}/></label></div>
               {notice && <p role="status" className="account-success">{notice}</p>}
               <div className="account-form-actions"><button className="account-primary" type="submit" disabled={saving}>Enregistrer les modifications</button></div>
             </form>
@@ -134,13 +134,13 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
           {page !== 'profile' && <>
             <div className="account-section-header"><div><span className="section-kicker">{page === 'favorites' ? 'Ma sélection' : 'Ma cuisine'}</span><h2>{page === 'favorites' ? 'Mes favoris' : 'Mes recettes'}</h2></div>{page === 'my-recipes' && <button className="account-primary" onClick={() => navigate('/recipes/new')}>+ Nouvelle recette</button>}</div>
             <div className="account-controls"><label className="account-search"><span className="sr-only">Rechercher dans mes recettes</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher une recette..."/></label><label className="account-sort">Trier par <select value={sort} onChange={event => setSort(event.target.value as typeof sort)}><option value="recent">Plus récentes</option><option value="name">Nom A-Z</option><option value="time">Plus rapides</option></select></label></div>
-            {page === 'favorites' && favoritesError ? <p role="alert">Impossible de charger tes favoris.</p>
-              : page === 'favorites' && favoritesPending ? <p role="status">Chargement de tes favoris…</p>
-              : filtered.length ? <div className="account-recipe-grid">{filtered.map(recipe => <article className="account-recipe-card" key={recipe.id}><NavLink to={recipePath(recipe.id)} navigate={navigate}><AccountRecipeImage recipe={recipe} token={token}/></NavLink><div className="account-recipe-body"><span className="card-category">{recipe.category}</span><h3><NavLink to={recipePath(recipe.id)} navigate={navigate}>{recipe.title}</NavLink></h3><p>{formatTime(recipe.time)} · {recipe.difficulty}</p><div className="account-recipe-actions">{page === 'favorites' ? <button onClick={() => onFavoriteToggle(recipe.id)}>Retirer des favoris</button> : <><button onClick={() => navigate(`/recipes/${recipe.id}/edit`)}>Modifier</button><button className="account-danger" onClick={() => setPendingDelete(recipe)}>Supprimer</button></>}</div></div></article>)}</div> : source.length === 0 ? <EmptyContent kind={page} navigate={navigate}/> : <div className="account-no-results"><h3>Aucune recette ne correspond</h3><p>Essaie d'autres mots-clés.</p><button onClick={() => setQuery('')}>Effacer la recherche</button></div>}
+            {page === 'favorites' && favoritesError ? <p role="alert">Impossible de charger les favoris.</p>
+              : page === 'favorites' && favoritesPending ? <p role="status">Chargement des favoris…</p>
+              : filtered.length ? <div className="account-recipe-grid">{filtered.map(recipe => <article className="account-recipe-card" key={recipe.id}><NavLink to={recipePath(recipe.id)} navigate={navigate}><AccountRecipeImage recipe={recipe} token={token}/></NavLink><div className="account-recipe-body"><span className="card-category">{recipe.category}</span><h3><NavLink to={recipePath(recipe.id)} navigate={navigate}>{recipe.title}</NavLink></h3><p>{formatTime(recipe.time)} · {recipe.difficulty}</p><div className="account-recipe-actions">{page === 'favorites' ? <button onClick={() => onFavoriteToggle(recipe.id)}>Retirer des favoris</button> : <><button onClick={() => navigate(`/recipes/${recipe.id}/edit`)}>Modifier</button><button className="account-danger" onClick={() => setPendingDelete(recipe)}>Supprimer</button></>}</div></div></article>)}</div> : source.length === 0 ? <EmptyContent kind={page} navigate={navigate}/> : <div className="account-no-results"><h3>Aucune recette ne correspond</h3><p>Essayez d’autres mots-clés.</p><button onClick={() => setQuery('')}>Effacer la recherche</button></div>}
           </>}
         </section>
       </div>
     </div>
-  {pendingDelete && <ConfirmDialog title="Supprimer cette recette ?" description={`« ${pendingDelete.title} » sera supprimée de tes créations de démonstration. Cette action est irréversible pour la session.`} confirmLabel="Supprimer la recette" destructive onCancel={() => setPendingDelete(null)} onConfirm={() => { onDeleteRecipe(pendingDelete.id); setPendingDelete(null); }}/>}
+  {pendingDelete && <ConfirmDialog title="Supprimer cette recette ?" description={`« ${pendingDelete.title} » sera supprimée définitivement.`} confirmLabel="Supprimer la recette" destructive onCancel={() => setPendingDelete(null)} onConfirm={() => { onDeleteRecipe(pendingDelete.id); setPendingDelete(null); }}/>}
   </main>;
 }

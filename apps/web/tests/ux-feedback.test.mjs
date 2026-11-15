@@ -32,6 +32,6 @@ test('Real image loading uses skeleton state and motion preferences', () => {
 });
 test('Dedicated not found page has helpful navigation', () => {
   assert.match(app, /isNotFound && <NotFoundPage/);
-  assert.match(feedback, /La recette s'est échappée/);
+  assert.match(feedback, /Page introuvable/);
   assert.match(feedback, /navigate\('\/recipes'\)/);
 });

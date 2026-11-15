@@ -54,7 +54,7 @@ function numberField(value: unknown, path: string, min: number, max: number, int
 export function validateRecipeJson(value: unknown): RecipeJsonValidation {
   if (!record(value)) return { ok: false, error: 'La racine du JSON doit être un objet.' };
   if (value.schemaVersion !== RECIPE_JSON_VERSION) return { ok: false, error: `schemaVersion : seule la version ${RECIPE_JSON_VERSION} est prise en charge.` };
-  if ('id' in value || 'uuid' in value || 'authorId' in value) return { ok: false, error: "Ne fournis pas d'identifiant : l'application le génère lors de l'enregistrement." };
+  if ('id' in value || 'uuid' in value || 'authorId' in value) return { ok: false, error: "L’application génère l’identifiant lors de l’enregistrement. Retirez le champ d’identification." };
   const allowed = new Set(['schemaVersion','title','description','category','difficulty','servings','times','budget','ingredients','utensils','steps','imageUrl']);
   const extra = Object.keys(value).find(key => !allowed.has(key));
   if (extra) return { ok: false, error: `Champ inconnu : ${extra}.` };
@@ -100,7 +100,7 @@ export function validateRecipeJson(value: unknown): RecipeJsonValidation {
 export function parseRecipeJson(source: string): RecipeJsonValidation {
   if (source.length > 150_000) return { ok: false, error: 'Le JSON dépasse la taille maximale de 150 Ko.' };
   try { return validateRecipeJson(JSON.parse(source) as unknown); }
-  catch { return { ok: false, error: 'JSON invalide : vérifie la syntaxe (guillemets, virgules et accolades).' }; }
+  catch { return { ok: false, error: 'JSON invalide. Vérifiez les guillemets, les virgules et les accolades.' }; }
 }
 
 export function recipeJsonFilename(title: string): string {
