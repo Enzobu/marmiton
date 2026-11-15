@@ -6,6 +6,7 @@ import { AuthPage, AUTH_ROUTES } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
 import { apiRequest, ApiError, authHeaders, fromApiRecipe, type ApiRecipe, type CatalogPage } from './api';
+import { useAuthenticatedImage } from './useAuthenticatedImage';
 import { readSession, saveSession } from './session';
 import { ThemeToggle, type ThemePreference } from './ThemeToggle';
 import { createRoot } from 'react-dom/client';
@@ -56,7 +57,6 @@ function App() {
   const [maxTimeFilter, setMaxTimeFilter] = useState<number | null>(() => parseCatalogQuery(window.location.search).maxTime);
   const [sortFilter, setSortFilter] = useState<CatalogSort>(() => parseCatalogQuery(window.location.search).sort);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [favorites, setFavorites] = useState<Recipe['id'][]>([]);
   const [ownedRecipesPending, setOwnedRecipesPending] = useState(false);
   const [ownedRecipesError, setOwnedRecipesError] = useState(false);
   const [recipeRevision, setRecipeRevision] = useState(0);
@@ -73,6 +73,7 @@ function App() {
   }, [toast]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [accessToken, setAccessToken] = useState(readSession);
+  const avatar = useAuthenticatedImage(profile?.avatar, Boolean(profile?.avatar?.startsWith('/me/avatar/')), accessToken);
   const [sessionPending, setSessionPending] = useState(Boolean(accessToken));
   const [sessionError, setSessionError] = useState(false);
   useEffect(() => {
@@ -203,7 +204,6 @@ function App() {
     setProfile(null);
     setCreatedRecipes([]);
     setDetail(undefined);
-    setFavorites([]);
     setFavoriteRecipes([]);
   }
 
@@ -228,7 +228,6 @@ function App() {
     try {
       await apiRequest(`/recipes/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
       setCreatedRecipes(current => current.filter(recipe => recipe.id !== id));
-      setFavorites(current => current.filter(value => value !== id));
       setFavoriteRecipes(current => current.filter(recipe => recipe.id !== id));
       setRecipeRevision(revision => revision + 1);
       notify('Recette supprimée.');
@@ -243,6 +242,26 @@ function App() {
   const [catalogPage, setCatalogPage] = useState(1);
   const [catalog, setCatalog] = useState<{ key: string; data?: CatalogPage; error?: boolean }>();
   const [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
+  const signedIn = Boolean(profile);
+  const [favoritesPending, setFavoritesPending] = useState(Boolean(accessToken));
+  const [favoritesError, setFavoritesError] = useState(false);
+  const favoriteUpdate = useRef(false);
+  useEffect(() => {
+    if (!accessToken || !signedIn) return;
+    const controller = new AbortController();
+    setFavoritesPending(true);
+    setFavoritesError(false);
+    apiRequest<ApiRecipe[]>('/me/favorites', { headers: authHeaders(accessToken), signal: controller.signal })
+      .then(items => setFavoriteRecipes(items.map(fromApiRecipe)))
+      .catch(error => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) invalidateSession();
+        else setFavoritesError(true);
+      })
+      .finally(() => { if (!controller.signal.aborted) setFavoritesPending(false); });
+    return () => controller.abort();
+  }, [accessToken, signedIn, recipeRevision]);
+  const favorites = favoriteRecipes.map(recipe => recipe.id);
   const [detail, setDetail] = useState<{ id: string; recipe?: Recipe; error?: boolean }>();
   const query = new URLSearchParams(serializeCatalogQuery(catalogFilters));
   query.set('limit', isHome && !showAll ? '6' : '24');
@@ -279,19 +298,41 @@ function App() {
   const editorialLoading = needsOwnedRecipes && (!!accessToken && (ownedRecipesPending || (ownedRecipesLoaded !== accessToken && !ownedRecipesError)));
   const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));
   const visible = useMemo(() => catalog?.data?.items.map(fromApiRecipe) ?? [], [catalog]);
-  const allRecipes = Array.from(new Map([...visible, ...favoriteRecipes, ...createdRecipes].map(recipe => [recipe.id, recipe])).values());
+
   const total = currentCatalog?.data?.total ?? 0;
   const resetAdvancedFilters = () => { setSearch(''); setCategory('Toutes les recettes'); setDifficultyFilter(''); setBudgetFilter(''); setMaxTimeFilter(null); setSortFilter('relevance'); setOnlyFavorites(false); };
   const hasCatalogFilters = Boolean(search || category !== 'Toutes les recettes' || difficultyFilter || budgetFilter || maxTimeFilter !== null || sortFilter !== 'relevance');
 
-  const toggleFavorite = (id: Recipe['id']) => {
+  const toggleFavorite = async (id: Recipe['id']) => {
     if (!profile) { navigate('/login'); return; }
+    if (favoritesPending || favoriteUpdate.current) return;
     const alreadySaved = favorites.includes(id);
-    const recipe = allRecipes.find(item => item.id === id) ?? selectedRecipe;
-    if (recipe && !alreadySaved) setFavoriteRecipes(current => [...current.filter(item => item.id !== id), recipe]);
-    if (alreadySaved) setFavoriteRecipes(current => current.filter(item => item.id !== id));
-    setFavorites(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
-    notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
+    favoriteUpdate.current = true;
+    try {
+      await apiRequest(`/me/favorites/${id}`, { method: alreadySaved ? 'DELETE' : 'PUT', headers: authHeaders(accessToken) });
+      const latest = await apiRequest<ApiRecipe[]>('/me/favorites', { headers: authHeaders(accessToken) });
+      setFavoriteRecipes(latest.map(fromApiRecipe));
+      setFavoritesError(false);
+      notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      notify('Impossible de mettre à jour tes favoris.', 'error');
+    } finally { favoriteUpdate.current = false; }
+  };
+
+  const saveProfile = async ({ firstName, lastName, bio, avatar, newsletter, publicRecipes }: Profile) => {
+    const photo = avatar === null || avatar?.startsWith('data:') ? avatar : undefined;
+    try {
+      const updated = await apiRequest<Profile>('/me/profile', {
+        method: 'PUT', headers: { ...authHeaders(accessToken), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, bio, photo, newsletter, publicRecipes }),
+      });
+      setProfile(updated);
+      return updated;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      throw error;
+    }
   };
   const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
   const openFavorites = () => { setMenuOpen(false); if (!profile) { navigate('/login'); return; } setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); navigate('/favorites'); };
@@ -311,7 +352,6 @@ function App() {
     setProfile(null);
     setCreatedRecipes([]);
     setDetail(undefined);
-    setFavorites([]);
     setFavoriteRecipes([]);
     setOnlyFavorites(false);
     navigate('/');
@@ -328,7 +368,7 @@ function App() {
         </nav>
         <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{profile ? <div className="profile-menu-wrap" ref={profileMenuRef}>
           <button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
-            <span className="profile-avatar">{profile.avatar ? <img src={profile.avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (profile.firstName.charAt(0) + profile.lastName.charAt(0)).toUpperCase()}</span><span>{profile.firstName}</span>
+            <span className="profile-avatar">{avatar ? <img src={avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (profile.firstName.charAt(0) + profile.lastName.charAt(0)).toUpperCase()}</span><span>{profile.firstName}</span>
           </button>
           {profileOpen && <div className="profile-dropdown">
             <div className="profile-dropdown-head"><strong>{profile.firstName} {profile.lastName}</strong><span>{profile.email}</span></div>
@@ -385,7 +425,7 @@ function App() {
     }}/>}
     {accountRoute && sessionPending && <p role="status">Vérification de la connexion…</p>}
     {accountRoute && sessionError && <p role="alert">Impossible de vérifier la connexion. Recharge la page.</p>}
-    {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
+    {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={favoriteRecipes} token={accessToken} favoritesPending={favoritesPending} favoritesError={favoritesError} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={saveProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
     {editorialLoading && <p className="section-container" role="status">Chargement de tes recettes…</p>}
     {needsOwnedRecipes && ownedRecipesError && <p className="section-container" role="alert">Impossible de charger tes recettes.</p>}
     {detailLoading && <p className="section-container" role="status">Chargement de la recette…</p>}

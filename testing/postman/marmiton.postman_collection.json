@@ -688,6 +688,377 @@
           ]
         }
       ]
+    },
+    {
+      "name": "account",
+      "item": [
+        {
+          "name": "POST /auth/login (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/favorites (guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/favorites"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/favorites/00000000-0000-4000-8000-000000000001 (add)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/favorites/00000000-0000-4000-8000-000000000001 (add-again)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/favorites/00000000-0000-4000-8000-999999999999 (missing)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-999999999999",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/favorites (list)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/favorites",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Favorite stored once\", () => pm.expect(pm.response.json().filter(row => row.id.endsWith(\"000000000001\"))).to.have.lengthOf(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/favorites/00000000-0000-4000-8000-000000000001 (remove)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/profile (invalid-profile)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\": \"\", \"lastName\": \"Owner\", \"bio\": \"Profil de test HTTP\", \"newsletter\": false, \"publicRecipes\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/profile (profile)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\": \"Test\", \"lastName\": \"Owner\", \"bio\": \"Profil de test HTTP\", \"newsletter\": false, \"publicRecipes\": true, \"photo\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jCt8AAAAASUVORK5CYII=\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Profile persisted\", () => { const profile = pm.response.json(); pm.expect(profile.bio).to.eql(\"Profil de test HTTP\"); pm.expect(profile.avatar).to.match(/^\\/me\\/avatar\\//); pm.environment.set(\"avatarPath\", profile.avatar.split('/').pop()); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET {{avatarPath}} (avatar)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/avatar/{{avatarPath}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET {{avatarPath}} (avatar-guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/avatar/{{avatarPath}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/profile (clear-profile)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\": \"Test\", \"lastName\": \"Owner\", \"bio\": \"\", \"newsletter\": false, \"publicRecipes\": true, \"photo\": null}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"avatarPath\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

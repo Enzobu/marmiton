@@ -6,26 +6,9 @@ import { ConfirmDialog } from './UiFeedback';
 import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import './recipe-pages.css';
 
-import { privateImageUrl } from './api';
+import { useAuthenticatedImage } from './useAuthenticatedImage';
 
 type Navigate = (path: string) => void;
-
-function useRecipeImage(recipe: Recipe | undefined, token: string | null) {
-  const [resolved, setResolved] = useState<{ source: string; url: string }>();
-  const source = recipe?.image;
-  const isPrivate = recipe?.privateImage;
-  useEffect(() => {
-    if (!source || !isPrivate || !token) return;
-    const controller = new AbortController();
-    let blobUrl: string | undefined;
-    privateImageUrl(source, token, controller.signal).then(url => {
-      if (controller.signal.aborted) URL.revokeObjectURL(url);
-      else { blobUrl = url; setResolved({ source, url }); }
-    }).catch(() => {});
-    return () => { controller.abort(); if (blobUrl) URL.revokeObjectURL(blobUrl); };
-  }, [source, isPrivate, token]);
-  return isPrivate ? resolved?.source === source ? resolved?.url ?? '' : '' : source ?? '';
-}
 
 type SharedProps = { token: string | null; navigate: Navigate; favorite: boolean; toggleFavorite: (id: Recipe['id']) => void };
 
@@ -72,7 +55,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
-  const image = useRecipeImage(recipe, token);
+  const image = useAuthenticatedImage(recipe.image, recipe.privateImage, token);
   const metadata = recipe.preparation ?? recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
   const ingredients = recipe.quantities ?? ingredientQuantities[recipe.id] ?? recipe.ingredients.map(name => ({ name, amount: null, icon: 'other' as const }));
   return <main className="detail-page">
@@ -114,7 +97,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
   defaultPublic: boolean;
 }) {
   const initialMeta = initialRecipe?.preparation;
-  const initialPhoto = useRecipeImage(initialRecipe, token);
+  const initialPhoto = useAuthenticatedImage(initialRecipe?.image, initialRecipe?.privateImage, token);
   const [isPublic, setIsPublic] = useState(initialRecipe?.isPublic ?? defaultPublic);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(initialRecipe?.title ?? '');

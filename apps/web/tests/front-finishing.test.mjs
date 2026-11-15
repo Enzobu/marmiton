@@ -11,7 +11,7 @@ test('Brand uses uppercase L in header and footer', () => {
 });
 
 test('Guests are redirected to login for every favorite entry point', () => {
-  assert.match(app, /const toggleFavorite = \(id: [^)]*\) => \{\s*if \(!profile\) \{ navigate\('\/login'\); return; \}/);
+  assert.match(app, /const toggleFavorite = async \(id: [^)]*\) => \{\s*if \(!profile\) \{ navigate\('\/login'\); return; \}/);
   assert.match(app, /const openFavorites = \(\) => \{ setMenuOpen\(false\); if \(!profile\) \{ navigate\('\/login'\); return; \}/);
   assert.match(app, /'\/favorites', '\/profile', '\/my-recipes', '\/recipes\/new'/);
   assert.match(app, /accountRoute && profile/);

@@ -8,9 +8,13 @@ import { sendResetMail, type SendResetMail } from './reset-mail.js';
 const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128), remember: z.boolean().optional() }).strict();
 const resetSchema = z.object({ token: tokenSchema, password: passwordSchema }).strict();
-const profileSelect = { email: true, firstName: true, lastName: true, bio: true, newsletter: true, publicRecipes: true, avatar: true } as const;
+export const profileSelect = { email: true, firstName: true, lastName: true, bio: true, newsletter: true, publicRecipes: true, avatar: true } as const;
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const newToken = () => randomBytes(32).toString('base64url');
+
+export function profileResponse<T extends { avatar: string | null }>(profile: T): T {
+  return { ...profile, avatar: profile.avatar?.replace(/^\/media\//, '/me/avatar/') ?? null };
+}
 
 export async function requireSession(request: FastifyRequest, reply: FastifyReply, db: PrismaClient) {
   reply.header('cache-control', 'no-store');
@@ -46,12 +50,12 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
       return true;
     });
     if (!issued) return reply.code(401).send({ error: 'Invalid email or password' });
-    return { accessToken, expiresAt, profile };
+    return { accessToken, expiresAt, profile: profileResponse(profile) };
   });
 
   app.get('/auth/me', async (request, reply) => {
     const session = await requireSession(request, reply, db);
-    if (session) return session.owner;
+    if (session) return profileResponse(session.owner);
   });
 
   app.post('/auth/logout', async (request, reply) => {

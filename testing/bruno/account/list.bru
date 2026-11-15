@@ -1,0 +1,20 @@
+meta {
+  name: GET /me/favorites (list)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/me/favorites
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Favorite stored once", () => expect(res.getBody().filter(row => row.id.endsWith("000000000001"))).to.have.lengthOf(1));
+}

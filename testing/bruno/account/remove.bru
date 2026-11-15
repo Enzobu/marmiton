@@ -1,0 +1,19 @@
+meta {
+  name: DELETE /me/favorites/00000000-0000-4000-8000-000000000001 (remove)
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}
