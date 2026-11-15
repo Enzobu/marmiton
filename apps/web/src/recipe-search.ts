@@ -1,10 +1,11 @@
+import { isRecipeDifficulty, type RecipeDifficulty } from './recipe-json.ts';
 import type { Recipe } from './recipe-data';
 
 export type CatalogSort = 'relevance' | 'popular' | 'rating' | 'prep' | 'time';
 export type CatalogFilters = {
   query: string;
   category: string;
-  difficulty: '' | 'Facile' | 'Moyen';
+  difficulty: '' | RecipeDifficulty;
   maxTime: number | null;
   budget: '' | 'Bon marché' | 'Moyen' | 'Assez cher';
   sort: CatalogSort;
@@ -30,7 +31,7 @@ export function parseCatalogQuery(search: string): CatalogFilters {
   return {
     query: (params.get('q') ?? '').slice(0, 150),
     category: ['Entrées','Plats','Desserts','Petit-déjeuner'].includes(category ?? '') ? category! : 'Toutes les recettes',
-    difficulty: difficulty === 'Facile' || difficulty === 'Moyen' ? difficulty : '',
+    difficulty: isRecipeDifficulty(difficulty) ? difficulty : '',
     budget: budget === 'Bon marché' || budget === 'Moyen' || budget === 'Assez cher' ? budget : '',
     maxTime,
     sort: CATALOG_SORTS.includes(sort as CatalogSort) ? sort as CatalogSort : 'relevance'

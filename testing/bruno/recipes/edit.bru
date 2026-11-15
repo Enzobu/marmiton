@@ -21,7 +21,7 @@ body:json {
       "title": "Recette modifi\u00e9e",
       "description": "Fixture HTTP",
       "category": "Plats",
-      "difficulty": "Facile",
+      "difficulty": "Difficile",
       "servings": 2,
       "times": {
         "preparation": 5,
@@ -50,5 +50,6 @@ body:json {
 
 tests {
   test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Updated difficulty", () => expect(res.getBody().difficulty).to.equal("Difficile"));
   test("Edited title", () => expect(res.getBody().title).to.equal("Recette modifiée"));
 }

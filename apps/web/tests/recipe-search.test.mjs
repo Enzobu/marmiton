@@ -6,7 +6,7 @@ import { DEFAULT_CATALOG_FILTERS, filterCatalogRecipes, parseCatalogQuery, seria
 const main = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
 
 test('Query parameters round-trip with accent-safe French values', () => {
-  const values = { ...DEFAULT_CATALOG_FILTERS, query: 'crème', category: 'Desserts', difficulty: 'Facile', budget: 'Bon marché', maxTime: 45, sort: 'rating' };
+  const values = { ...DEFAULT_CATALOG_FILTERS, query: 'crème', category: 'Desserts', difficulty: 'Difficile', budget: 'Bon marché', maxTime: 45, sort: 'rating' };
   const parsed = parseCatalogQuery(serializeCatalogQuery(values));
   assert.deepEqual(parsed, values);
 });
