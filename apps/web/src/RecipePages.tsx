@@ -1,3 +1,4 @@
+import { CookingMode } from './CookingMode';
 import { SelectField } from './SelectField';
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { clearDraft, readDraft, saveDraft, validateRecipeImage, type RecipeDraft } from './recipe-draft';
@@ -51,10 +52,12 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
+  const [cooking, setCooking] = useState(false);
   const image = useAuthenticatedImage(recipe.image, recipe.privateImage, token);
   const metadata = recipe.preparation ?? recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
   const ingredients = ingredientsForRecipe(recipe);
   return <main className="detail-page">
+    {cooking && <CookingMode recipe={recipe} servings={servings} onClose={() => setCooking(false)}/>}
     <div className="detail-container">
       <nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => { event.preventDefault(); navigate('/'); }}>Accueil</a><span>/</span><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}>Recettes</a><span>/</span><span aria-current="page">{recipe.title}</span></nav>
       <div className="detail-intro"><div><span className="section-kicker">{recipe.category}</span><h1>{recipe.title}</h1><p>{recipe.description}</p><div className="detail-rating"><Glyph name="star" size={17}/><strong>{recipe.rating.toFixed(1).replace('.', ',')} / 5</strong><span>· {recipe.reviews} avis{recipe.reviews > 0 ? ' (données d’exemple)' : ''}</span></div></div><div className="detail-actions"><button className={`detail-outline-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-pressed={favorite}><Glyph name="heart"/>{favorite ? 'Dans mes favoris' : 'Sauvegarder'}</button><button className="detail-icon-button" onClick={() => window.print()} aria-label="Imprimer la recette" title="Imprimer"><Glyph name="print"/></button></div></div>
@@ -69,7 +72,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
           <div className="utensil-block"><h3>Ustensiles</h3><ul>{metadata.utensils.map(item => <li key={item}><Glyph name="chef" size={17}/>{item}</li>)}</ul></div>
           <div className="panel-note"><strong>Petit conseil</strong><p>Cochez les ingrédients à mesure que vous les préparez.</p></div>
         </aside>
-        <div className="preparation-panel"><span className="section-kicker">Étapes</span><h2>La préparation</h2><p className="preparation-lead">Marquez chaque étape une fois terminée pour suivre votre progression.</p><div className="preparation-progress"><div><strong>{finishedSteps.length} / {recipe.steps.length}</strong> étapes terminées</div><div className="progress-track"><span style={{ width: `${recipe.steps.length ? 100 * finishedSteps.length / recipe.steps.length : 0}%` }}/></div></div>
+        <div className="preparation-panel"><span className="section-kicker">Étapes</span><h2>La préparation</h2><p className="preparation-lead">Marquez chaque étape une fois terminée pour suivre votre progression.</p>{recipe.steps.length > 0 && <div className="planning-actions"><button type="button" className="detail-outline-button" onClick={() => setCooking(true)}>Lancer le mode cuisine</button></div>}<div className="preparation-progress"><div><strong>{finishedSteps.length} / {recipe.steps.length}</strong> étapes terminées</div><div className="progress-track"><span style={{ width: `${recipe.steps.length ? 100 * finishedSteps.length / recipe.steps.length : 0}%` }}/></div></div>
           <ol className="step-list">{recipe.steps.map((step, index) => <li className={finishedSteps.includes(index) ? 'step-done' : ''} key={index}><button type="button" className="step-number" aria-label={finishedSteps.includes(index) ? `Marquer l’étape ${index + 1} non terminée` : `Marquer l’étape ${index + 1} terminée`} aria-pressed={finishedSteps.includes(index)} onClick={() => setFinishedSteps(current => current.includes(index) ? current.filter(item => item !== index) : [...current, index])}>{finishedSteps.includes(index) ? <Glyph name="check" size={20}/> : (index + 1).toString().padStart(2, '0')}</button><div><h3>Étape {index + 1}</h3><p>{step}</p></div></li>)}</ol>
           <div className="detail-tip"><span className="tip-icon"><Glyph name="chef" size={24}/></span><div><strong>Conseil de préparation</strong><p>Préparez les ingrédients et les ustensiles avant de commencer.</p></div></div>
         </div>
