@@ -4,7 +4,7 @@ import { clearDraft, readDraft, saveDraft, validateRecipeImage, type RecipeDraft
 import { RECIPE_DIFFICULTIES, validateRecipeJson, type RecipeDifficulty, type RecipeJson } from './recipe-json';
 import { RecipeJsonModal } from './RecipeJsonModal';
 import { ConfirmDialog } from './UiFeedback';
-import { BASE_SERVINGS, formatQuantity, formatTime, ingredientQuantities, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
+import { BASE_SERVINGS, formatQuantity, formatTime, ingredientBaseServings, ingredientsForRecipe, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import { ToggleSwitch } from './ToggleSwitch';
 import { ImagePicker } from './ImagePicker';
 import './recipe-pages.css';
@@ -47,13 +47,13 @@ function IngredientPicture({ icon }: { icon: Ingredient['icon'] }) {
   </span>;
 }
 
-export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token }: { recipe: Recipe } & SharedProps) {
+export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping }: { recipe: Recipe; addToShopping: (servings: number) => void } & SharedProps) {
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
   const image = useAuthenticatedImage(recipe.image, recipe.privateImage, token);
   const metadata = recipe.preparation ?? recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
-  const ingredients = recipe.quantities ?? ingredientQuantities[recipe.id] ?? recipe.ingredients.map(name => ({ name, amount: null, icon: 'other' as const }));
+  const ingredients = ingredientsForRecipe(recipe);
   return <main className="detail-page">
     <div className="detail-container">
       <nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => { event.preventDefault(); navigate('/'); }}>Accueil</a><span>/</span><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}>Recettes</a><span>/</span><span aria-current="page">{recipe.title}</span></nav>
@@ -64,7 +64,8 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
         <aside className="ingredients-panel"><div className="panel-heading"><div><span className="section-kicker">Avant de commencer</span><h2>Ingrédients</h2></div><span className="panel-count">{ingredients.length} ingrédients</span></div>
           <div className="servings-control"><div><Glyph name="people" size={20}/><span>Nombre de portions</span></div><div className="servings-stepper"><button type="button" onClick={() => setServings(current => Math.max(1, current - 1))} disabled={servings <= 1} aria-label="Diminuer le nombre de personnes"><Glyph name="minus" size={17}/></button><output aria-live="polite">{servings}</output><button type="button" onClick={() => setServings(current => Math.min(12, current + 1))} disabled={servings >= 12} aria-label="Augmenter le nombre de personnes"><Glyph name="plus" size={17}/></button></div></div>
           <p className="panel-hint">Les quantités s’adaptent automatiquement au nombre de personnes.</p>
-          <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, recipe.quantities ? recipe.servings : undefined)}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
+          <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, ingredientBaseServings(recipe))}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
+          {ingredients.length > 0 && <div className="planning-actions"><button type="button" className="detail-outline-button" onClick={() => addToShopping(servings)}>Ajouter à la liste de courses</button>{token && <a className="planning-link" href="/shopping-list" onClick={event => { event.preventDefault(); navigate('/shopping-list'); }}>Voir la liste</a>}</div>}
           <div className="utensil-block"><h3>Ustensiles</h3><ul>{metadata.utensils.map(item => <li key={item}><Glyph name="chef" size={17}/>{item}</li>)}</ul></div>
           <div className="panel-note"><strong>Petit conseil</strong><p>Cochez les ingrédients à mesure que vous les préparez.</p></div>
         </aside>
