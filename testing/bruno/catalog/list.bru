@@ -1,0 +1,16 @@
+meta {
+  name: GET /recipes?category=Desserts&limit=1&sort=time (list)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/recipes?category=Desserts&limit=1&sort=time
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Paginated desserts", () => { const body = res.getBody(); expect(body.items).to.have.lengthOf(1); expect(body.items[0].category).to.equal("Desserts"); expect(body.total).to.be.at.least(1); });
+}

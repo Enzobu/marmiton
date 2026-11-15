@@ -39,6 +39,103 @@
           }
         }
       ]
+    },
+    {
+      "name": "catalog",
+      "item": [
+        {
+          "name": "GET /recipes?category=Desserts&limit=1&sort=time (list)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes?category=Desserts&limit=1&sort=time"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginated desserts', () => { const body = pm.response.json(); pm.expect(body.items).to.have.lengthOf(1); pm.expect(body.items[0].category).to.eql('Desserts'); pm.expect(body.total).to.be.gte(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/00000000-0000-4000-8000-000000000001 (detail)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/00000000-0000-4000-8000-000000000001"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Recipe has quantities and steps', () => { pm.expect(pm.response.json().quantities).to.have.lengthOf(5); pm.expect(pm.response.json().steps).to.have.lengthOf(3); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes?limit=0 (invalid-query)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes?limit=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/not-a-uuid (invalid-uuid)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/not-a-uuid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/00000000-0000-4000-8000-999999999999 (missing)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/00000000-0000-4000-8000-999999999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

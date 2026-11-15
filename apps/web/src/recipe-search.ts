@@ -50,12 +50,12 @@ export function serializeCatalogQuery(filters: CatalogFilters): string {
 
 export function filterCatalogRecipes(
   recipes: readonly Recipe[],
-  preparation: Record<number, { prep: number; cook: number; rest: number; budget: string }>,
+  preparation: Record<string | number, { prep: number; cook: number; rest: number; budget: string }>,
   filters: CatalogFilters
 ): Recipe[] {
   const query = textNormalized(filters.query.trim());
   const matches = recipes.filter(recipe => {
-    const meta = preparation[recipe.id];
+    const meta = recipe.preparation ?? preparation[recipe.id];
     const duration = meta ? meta.prep + meta.cook + meta.rest : recipe.time;
     const searchable = textNormalized([recipe.title,recipe.description,recipe.category,...recipe.ingredients].join(' '));
     return (!query || searchable.includes(query))
@@ -66,7 +66,7 @@ export function filterCatalogRecipes(
   });
   if (filters.sort === 'relevance') return matches;
   return matches.sort((a,b) => {
-    const pa = preparation[a.id], pb = preparation[b.id];
+    const pa = a.preparation ?? preparation[a.id], pb = b.preparation ?? preparation[b.id];
     if (filters.sort === 'popular') return b.reviews - a.reviews || b.rating - a.rating;
     if (filters.sort === 'rating') return b.rating - a.rating || b.reviews - a.reviews;
     if (filters.sort === 'prep') return (pa?.prep ?? a.time) - (pb?.prep ?? b.time);

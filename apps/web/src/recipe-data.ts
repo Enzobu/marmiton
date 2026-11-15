@@ -1,5 +1,5 @@
 export type Recipe = {
-  id: number;
+  id: string | number;
   title: string;
   image: string;
   category: string;
@@ -12,6 +12,9 @@ export type Recipe = {
   steps: string[];
   badge?: string;
   servings?: number;
+  quantities?: Ingredient[];
+  preparation?: Preparation;
+  isPublic?: boolean;
 };
 
 export const recipes: Recipe[] = [
@@ -28,7 +31,7 @@ export const recipes: Recipe[] = [
 
 export type Ingredient = { name: string; amount: number | null; unit?: string; icon: 'vegetable' | 'meat' | 'dairy' | 'grain' | 'spice' | 'other' };
 export const BASE_SERVINGS = 4;
-export const ingredientQuantities: Record<number, Ingredient[]> = {
+export const ingredientQuantities: Record<string | number, Ingredient[]> = {
   1: [
     { name: 'Feuilles de lasagne', amount: 12, icon: 'grain' },
     { name: 'Viande hachée', amount: 500, unit: 'g', icon: 'meat' },
@@ -86,7 +89,8 @@ export const ingredientQuantities: Record<number, Ingredient[]> = {
     { name: 'Cannelle', amount: 1, unit: 'c. à café', icon: 'spice' }
   ]
 };
-export const recipePreparation: Record<number, { prep: number; cook: number; rest: number; budget: string; utensils: string[]; servings?: number }> = {
+export type Preparation = { prep: number; cook: number; rest: number; budget: string; utensils: string[]; servings?: number };
+export const recipePreparation: Record<string | number, Preparation> = {
   1: { prep: 30, cook: 45, rest: 0, budget: 'Moyen', utensils: ['Plat à gratin', 'Poêle', 'Four'] },
   2: { prep: 15, cook: 10, rest: 0, budget: 'Bon marché', utensils: ['Four', 'Moule', 'Saladier'] },
   3: { prep: 15, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Couteau', 'Saladier'] },
@@ -104,4 +108,4 @@ export function formatQuantity(ingredient: Ingredient, servings: number, baseSer
   return `${formatted}${ingredient.unit ? ' ' + ingredient.unit : ''}`;
 }
 
-export function recipePath(id: number): string { return `/recipes/${id}`; }
+export function recipePath(id: Recipe['id']): string { return `/recipes/${id}`; }
