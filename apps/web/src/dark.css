@@ -72,8 +72,8 @@ html[data-theme="dark"] :is(.form-error,.recipe-json-error,.recipe-json-warning)
 html[data-theme="dark"] .draft-message{background:#25472e;color:#c5f2ca}
 
 /* Account pages, profile, favorites and cards */
-html[data-theme="dark"] :is(.account-sidebar,.account-main,.account-recipe-card,.account-upload-label,.account-recipe-actions button,.account-search input,.account-sort select,.account-form-grid input,.account-form-grid textarea){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
-html[data-theme="dark"] :is(.account-sidebar nav a,.account-form-grid label,.account-recipe-body h3 a,.account-upload-label){color:var(--color-ink)}
+html[data-theme="dark"] :is(.account-sidebar,.account-main,.account-recipe-card,.account-recipe-actions button,.account-search input,.account-sort select,.account-form-grid input,.account-form-grid textarea){background:var(--color-paper);color:var(--color-ink);border-color:var(--color-line)}
+html[data-theme="dark"] :is(.account-sidebar nav a,.account-form-grid label,.account-recipe-body h3 a){color:var(--color-ink)}
 html[data-theme="dark"] :is(.account-photo-control,.account-empty,.account-no-results,.account-security,.account-form-grid input:read-only){background:#29332b;color:var(--color-ink);border-color:var(--color-line)}
 html[data-theme="dark"] .account-sidebar .account-nav-active{background:#403127;color:var(--color-accent)}
 html[data-theme="dark"] .account-avatar{background:#355341;color:#e2f3e4}

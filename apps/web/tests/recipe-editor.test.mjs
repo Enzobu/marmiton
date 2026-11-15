@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 const editor = readFileSync(new URL('../src/RecipePages.tsx', import.meta.url), 'utf8');
+const imagePicker = readFileSync(new URL('../src/ImagePicker.tsx', import.meta.url), 'utf8');
 const draft = readFileSync(new URL('../src/recipe-draft.ts', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
 
 test('Recipe editor supports local photo selection and validation', () => {
-  assert.match(editor, /type="file"/);
+  assert.match(editor, /<ImagePicker /);
+  assert.match(imagePicker, /type="file"/);
   assert.match(editor, /validateRecipeImage\(file\)/);
   assert.match(draft, /2_000_000/);
   assert.match(draft, /image\/webp/);

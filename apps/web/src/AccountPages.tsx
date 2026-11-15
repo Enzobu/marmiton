@@ -5,6 +5,7 @@ import { useAuthenticatedImage } from './useAuthenticatedImage';
 import { validateRecipeImage } from './recipe-draft';
 import { ToggleSwitch } from './ToggleSwitch';
 import { AccountPassword } from './AccountPassword';
+import { ImagePicker } from './ImagePicker';
 import './account.css';
 
 export type Profile = { firstName: string; lastName: string; email: string; avatar?: string | null; bio: string; newsletter: boolean; publicRecipes: boolean };
@@ -121,7 +122,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
           {page === 'profile' && profile && <>
             <div className="account-section-header"><div><span className="section-kicker">Mes informations</span><h2>Mon profil</h2></div></div>
             <form onSubmit={saveProfile} className="account-profile-form">
-              <div className="account-photo-control"><span className="account-avatar-frame"><InitialAvatar profile={{...profile,avatar: resolvedAvatar || undefined}} large/></span><div><strong>Photo de profil</strong><p>JPG, PNG ou WebP, 2 Mo maximum.</p><label className="account-upload-label" htmlFor="account-avatar-file">Choisir une photo</label><input id="account-avatar-file" className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto}/>{avatar && <button type="button" className="account-text-button" onClick={() => setAvatar('')}>Supprimer la photo</button>}</div></div>
+              <div className="account-photo-control"><span className="account-avatar-frame"><InitialAvatar profile={{...profile,avatar: resolvedAvatar || undefined}} large/></span><div><ImagePicker label="Photo de profil" hasImage={Boolean(avatar)} onChange={onPhoto}/>{avatar && <button type="button" className="account-text-button" onClick={() => setAvatar('')}>Supprimer la photo</button>}</div></div>
               {saveError && <p role="alert" className="account-error">{saveError}</p>}
               {photoError && <p role="alert" className="account-error">{photoError}</p>}
               <div className="account-form-grid"><label>Prénom<input required maxLength={70} autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)}/></label><label>Nom<input required maxLength={70} autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)}/></label><label className="account-field-wide">Adresse e-mail<input type="email" readOnly value={profile.email}/><small>Adresse de connexion et de réinitialisation du mot de passe.</small></label><label className="account-field-wide">Biographie<textarea maxLength={300} rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="Par exemple, vos spécialités culinaires"/></label></div>
