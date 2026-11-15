@@ -33,3 +33,10 @@ test('Auth visual theme follows existing tokens with mobile layout', () => {
   assert.match(css, /var\(--color-paper\)/);
   assert.match(css, /@media\(max-width:760px\)/);
 });
+
+test('Recovery links point to the profile for signed-in users and login for guests', () => {
+  assert.ok(auth.includes("page !== 'login' && !sessionPending"));
+  assert.ok(auth.includes("signedIn ? '/profile' : '/login'"));
+  assert.ok(auth.includes("signedIn ? 'Retour au profil' : 'Retour à la connexion'"));
+  assert.ok(main.includes('signedIn={Boolean(profile)} sessionPending={sessionPending}'));
+});

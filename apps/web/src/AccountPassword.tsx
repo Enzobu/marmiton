@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiError, apiRequest, authHeaders } from './api';
+import { ApiError, requestPasswordReset } from './api';
 
 export function AccountPassword({ token, email, navigate }: {
   token: string | null;
@@ -16,10 +16,7 @@ export function AccountPassword({ token, email, navigate }: {
     setBusy(true);
     setError('');
     try {
-      await apiRequest('/auth/forgot-password', {
-        method: 'POST',
-        headers: authHeaders(token),
-      });
+      await requestPasswordReset({ token });
       setSent(true);
     } catch (failure) {
       const status = failure instanceof ApiError ? failure.status : 0;
