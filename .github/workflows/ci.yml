@@ -83,11 +83,17 @@ jobs:
           TEST_REVISION: "1111111111111111111111111111111111111111"
         run: |
           export UPLOADS_DIRECTORY="$(mktemp -d)"
-          node --input-type=module -e 'import { buildApp } from "./apps/api/dist/app.js"; await buildApp({ revision: process.env.TEST_REVISION }).listen({ host: "127.0.0.1", port: 3001 });' &
-          server_pid=$!
-          trap 'kill "$server_pid"' EXIT
-          curl --retry 15 --retry-connrefused --retry-delay 1 --fail http://localhost:3001/health
+          start_api() {
+            node --input-type=module -e 'import { buildApp } from "./apps/api/dist/app.js"; await buildApp({ revision: process.env.TEST_REVISION }).listen({ host: "127.0.0.1", port: 3001 });' &
+            server_pid=$!
+            trap 'kill "$server_pid"' EXIT
+            curl --retry 15 --retry-connrefused --retry-delay 1 --fail http://localhost:3001/health
+          }
+          start_api
           npx --yes newman@6 run testing/postman/marmiton.postman_collection.json -e testing/postman/marmiton_local.postman_environment.json
+          kill "$server_pid"
+          wait "$server_pid" || true
+          start_api
           (cd testing/bruno && npx --yes @usebruno/cli@2 run --env marmiton_local)
       - name: Validate root Docker Compose
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
