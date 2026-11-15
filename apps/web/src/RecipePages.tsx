@@ -1,13 +1,33 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { clearDraft, readDraft, saveDraft, validateRecipeImage, type RecipeDraft } from './recipe-draft';
-import { type RecipeJson } from './recipe-json';
+import { validateRecipeJson, type RecipeJson } from './recipe-json';
 import { RecipeJsonModal } from './RecipeJsonModal';
 import { ConfirmDialog } from './UiFeedback';
-import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePath, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
+import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import './recipe-pages.css';
 
+import { privateImageUrl } from './api';
+
 type Navigate = (path: string) => void;
-type SharedProps = { navigate: Navigate; favorite: boolean; toggleFavorite: (id: Recipe['id']) => void };
+
+function useRecipeImage(recipe: Recipe | undefined, token: string | null) {
+  const [resolved, setResolved] = useState<{ source: string; url: string }>();
+  const source = recipe?.image;
+  const isPrivate = recipe?.privateImage;
+  useEffect(() => {
+    if (!source || !isPrivate || !token) return;
+    const controller = new AbortController();
+    let blobUrl: string | undefined;
+    privateImageUrl(source, token, controller.signal).then(url => {
+      if (controller.signal.aborted) URL.revokeObjectURL(url);
+      else { blobUrl = url; setResolved({ source, url }); }
+    }).catch(() => {});
+    return () => { controller.abort(); if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [source, isPrivate, token]);
+  return isPrivate ? resolved?.source === source ? resolved?.url ?? '' : '' : source ?? '';
+}
+
+type SharedProps = { token: string | null; navigate: Navigate; favorite: boolean; toggleFavorite: (id: Recipe['id']) => void };
 
 function Glyph({ name, size = 20 }: { name: 'back' | 'clock' | 'star' | 'heart' | 'minus' | 'plus' | 'check' | 'people' | 'chef' | 'wallet' | 'print' | 'arrow' | 'trash'; size?: number }) {
   const shapes: Record<typeof name, React.ReactNode> = {
@@ -48,17 +68,18 @@ function formatTime(minutes: number) {
   return hours ? `${hours} h${rest ? ` ${rest.toString().padStart(2, '0')}` : ''}` : `${minutes} min`;
 }
 
-export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite }: { recipe: Recipe } & SharedProps) {
+export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token }: { recipe: Recipe } & SharedProps) {
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
+  const image = useRecipeImage(recipe, token);
   const metadata = recipe.preparation ?? recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
   const ingredients = recipe.quantities ?? ingredientQuantities[recipe.id] ?? recipe.ingredients.map(name => ({ name, amount: null, icon: 'other' as const }));
   return <main className="detail-page">
     <div className="detail-container">
       <nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => { event.preventDefault(); navigate('/'); }}>Accueil</a><span>/</span><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}>Recettes</a><span>/</span><span aria-current="page">{recipe.title}</span></nav>
       <div className="detail-intro"><div><span className="section-kicker">La recette du moment · {recipe.category}</span><h1>{recipe.title}</h1><p>{recipe.description}</p><div className="detail-rating"><Glyph name="star" size={17}/><strong>{recipe.rating.toFixed(1).replace('.', ',')} / 5</strong><span>· {recipe.reviews} avis de démonstration</span></div></div><div className="detail-actions"><button className={`detail-outline-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-pressed={favorite}><Glyph name="heart"/>{favorite ? 'Dans mes favoris' : 'Sauvegarder'}</button><button className="detail-icon-button" onClick={() => window.print()} aria-label="Imprimer la recette" title="Imprimer"><Glyph name="print"/></button></div></div>
-      <div className="detail-photo">{recipe.image && <img src={recipe.image} alt={recipe.title}/>}<div className="detail-photo-note">Une recette à cuisiner avec amour</div></div>
+      <div className="detail-photo">{image && <img src={image} alt={recipe.title}/>}<div className="detail-photo-note">Une recette à cuisiner avec amour</div></div>
       <div className="detail-stats" aria-label="Informations de la recette"><div><Glyph name="clock" size={22}/><span>Préparation</span><strong>{formatTime(metadata.prep)}</strong></div><div><Glyph name="clock" size={22}/><span>Cuisson</span><strong>{formatTime(metadata.cook)}</strong></div><div><Glyph name="clock" size={22}/><span>Repos</span><strong>{formatTime(metadata.rest)}</strong></div><div><Glyph name="chef" size={23}/><span>Difficulté</span><strong>{recipe.difficulty}</strong></div><div><Glyph name="wallet" size={22}/><span>Budget</span><strong>{metadata.budget}</strong></div></div>
       <div className="detail-columns">
         <aside className="ingredients-panel"><div className="panel-heading"><div><span className="section-kicker">Avant de commencer</span><h2>Ingrédients</h2></div><span className="panel-count">{ingredients.length} ingrédients</span></div>
@@ -82,25 +103,38 @@ type DraftIngredient = { id: number; name: string; amount: string; unit: string 
 type DraftStep = { id: number; value: string };
 const demoImage = 'https://images.unsplash.com/photo-1547592180-85f173990554?w=900&q=85';
 
-export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode = false }: { navigate: Navigate; onCreate: (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number, metadata: {rest: number; budget: string; utensils: string[]; servings: number}) => void; initialRecipe?: Recipe; developerMode?: boolean }) {
+export type RecipeSubmission = { recipe: RecipeJson; isPublic: boolean; photo?: string; keepPhoto?: boolean };
+
+export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode = false, token, defaultPublic }: {
+  navigate: Navigate;
+  onCreate: (submission: RecipeSubmission, id?: Recipe['id']) => Promise<Recipe>;
+  initialRecipe?: Recipe;
+  developerMode?: boolean;
+  token: string | null;
+  defaultPublic: boolean;
+}) {
+  const initialMeta = initialRecipe?.preparation;
+  const initialPhoto = useRecipeImage(initialRecipe, token);
+  const [isPublic, setIsPublic] = useState(initialRecipe?.isPublic ?? defaultPublic);
+  const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(initialRecipe?.title ?? '');
   const [description, setDescription] = useState(initialRecipe?.description ?? '');
   const [category, setCategory] = useState(initialRecipe?.category ?? 'Plats');
   const [difficulty, setDifficulty] = useState<'Facile' | 'Moyen'>(initialRecipe?.difficulty ?? 'Facile');
-  const [prep, setPrep] = useState(recipePreparation[initialRecipe?.id ?? 0]?.prep ?? 15);
-  const [rest, setRest] = useState(recipePreparation[initialRecipe?.id ?? 0]?.rest ?? 0);
-  const [budget, setBudget] = useState(recipePreparation[initialRecipe?.id ?? 0]?.budget ?? 'Bon marché');
-  const [utensils, setUtensils] = useState<string[]>(recipePreparation[initialRecipe?.id ?? 0]?.utensils ?? []);
+  const [prep, setPrep] = useState(initialMeta?.prep ?? 15);
+  const [rest, setRest] = useState(initialMeta?.rest ?? 0);
+  const [budget, setBudget] = useState(initialMeta?.budget ?? 'Bon marché');
+  const [utensils, setUtensils] = useState<string[]>(initialMeta?.utensils ?? []);
   const [utensilInput, setUtensilInput] = useState('');
   const [photoError, setPhotoError] = useState('');
   const [savedDraft, setSavedDraft] = useState<RecipeDraft | null>(() => initialRecipe ? null : readDraft());
   const [draftMessage, setDraftMessage] = useState('');
   const [jsonModalOpen, setJsonModalOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<RecipeJson | null>(null);
-  const [cook, setCook] = useState(recipePreparation[initialRecipe?.id ?? 0]?.cook ?? 30);
-  const [servings, setServings] = useState(recipePreparation[initialRecipe?.id ?? 0]?.servings ?? initialRecipe?.servings ?? 4);
+  const [cook, setCook] = useState(initialMeta?.cook ?? 30);
+  const [servings, setServings] = useState(initialMeta?.servings ?? initialRecipe?.servings ?? 4);
   const [image, setImage] = useState(initialRecipe?.image ?? '');
-  const [items, setItems] = useState<DraftIngredient[]>(() => initialRecipe ? (ingredientQuantities[initialRecipe.id] ?? []).map((item, index) => ({ id: index + 1, name: item.name, amount: item.amount === null ? '' : String(Math.round(item.amount * (recipePreparation[initialRecipe.id]?.servings ?? initialRecipe.servings ?? BASE_SERVINGS) / BASE_SERVINGS * 100) / 100), unit: item.unit ?? '' })) : [{ id: 1, name: '', amount: '', unit: 'g' }]);
+  const [items, setItems] = useState<DraftIngredient[]>(() => initialRecipe ? (initialRecipe.quantities ?? []).map((item, index) => ({ id: index + 1, name: item.name, amount: item.amount === null ? '' : String(item.amount), unit: item.unit ?? '' })) : [{ id: 1, name: '', amount: '', unit: 'g' }]);
   const [steps, setSteps] = useState<DraftStep[]>(() => initialRecipe ? initialRecipe.steps.map((value,index) => ({ id: index+100, value })) : [{ id: 100, value: '' }]);
   const [error, setError] = useState('');
   const [counter, setCounter] = useState(1000);
@@ -149,9 +183,9 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
     servings,
     times: { preparation: prep, cooking: cook, rest },
     budget: budget as RecipeJson['budget'],
-    ingredients: items.map(item => ({ name: item.name, quantity: item.amount.trim() === '' ? NaN : Number(item.amount), unit: item.unit })),
+    ingredients: items.map(item => ({ name: item.name, quantity: item.amount.trim() === '' ? null : Number(item.amount), unit: item.unit })),
     utensils, steps: steps.map(step => step.value),
-    imageUrl: image.startsWith('data:') || !image.trim() ? null : image.trim()
+    imageUrl: /^https?:\/\//i.test(image) ? image : null
   };
   const importRecipe = (document: RecipeJson) => setPendingImport(document);
   const applyImportedRecipe = () => {
@@ -162,7 +196,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
     setPrep(document.times.preparation); setCook(document.times.cooking); setRest(document.times.rest);
     setBudget(document.budget); setServings(document.servings); setUtensils([...document.utensils]);
     setImage(document.imageUrl ?? '');
-    setItems(document.ingredients.map((item,index) => ({ id: index + 1, name: item.name, amount: String(item.quantity), unit: item.unit })));
+    setItems(document.ingredients.map((item,index) => ({ id: index + 1, name: item.name, amount: item.quantity === null ? '' : String(item.quantity), unit: item.unit })));
     setSteps(document.steps.map((value,index) => ({ id: 100 + index, value })));
     setCounter(1000);
     setSavedDraft(null); setPhotoError(''); setError('');
@@ -173,29 +207,38 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
   const addIngredient = () => { setItems(value => [...value, { id: counter, name: '', amount: '', unit: 'g' }]); setCounter(value => value + 1); };
   const addStep = () => { setSteps(value => [...value, { id: counter, value: '' }]); setCounter(value => value + 1); };
   const updateIngredient = (id: number, field: 'name' | 'amount' | 'unit', value: string) => setItems(current => current.map(item => item.id === id ? { ...item, [field]: value } : item));
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!title.trim() || !description.trim() || items.some(item => !item.name.trim() || item.amount.trim() === '' || !Number.isFinite(Number(item.amount)) || Number(item.amount) < 0) || steps.some(item => !item.value.trim())) {
-      setError('Complète le titre, la description, les ingrédients et toutes les étapes avant de continuer.'); return;
-    }
-    const id = initialRecipe?.id ?? Date.now();
-    const recipe: Recipe = { id, title: title.trim(), description: description.trim(), category, difficulty, image: image.trim() || demoImage, time: prep + cook + rest, rating: initialRecipe?.rating ?? 0, reviews: initialRecipe?.reviews ?? 0, ingredients: items.map(item => item.name.trim()), steps: steps.map(item => item.value.trim()), badge: initialRecipe?.badge ?? 'Ma création', servings };
-    onCreate(recipe, items.map(item => ({ name: item.name.trim(), amount: Number(item.amount) * BASE_SERVINGS / servings, unit: item.unit.trim() || undefined, icon: 'other' })), prep, cook, { rest, budget, utensils, servings });
-    if (!initialRecipe) clearDraft();
-    navigate(recipePath(id));
+    if (saving) return;
+    const checked = validateRecipeJson(exportRecipe);
+    if (!checked.ok) { setError(checked.error); return; }
+    setError('');
+    setSaving(true);
+    try {
+      const saved = await onCreate({
+        recipe: checked.value, isPublic,
+        photo: image.startsWith('data:') ? image : undefined,
+        keepPhoto: Boolean(initialRecipe?.image && initialRecipe.image === image),
+      }, initialRecipe?.id);
+      if (!initialRecipe) clearDraft();
+      navigate(`/recipes/${saved.id}`);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Impossible d’enregistrer la recette.');
+    } finally { setSaving(false); }
   };
   return <main className="create-page"><div className="detail-container"><nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => {event.preventDefault();navigate('/');}}>Accueil</a><span>/</span><a href="/recipes" onClick={event => {event.preventDefault();navigate('/recipes');}}>Recettes</a><span>/</span><span aria-current="page">{initialRecipe ? 'Modifier la recette' : 'Nouvelle recette'}</span></nav>
     <div className="create-heading"><span className="section-kicker">Ton carnet de cuisine</span><div className="create-heading-actions"><h1>{initialRecipe ? 'Modifie ta recette' : 'Partage ta recette'}</h1>{developerMode && <button type="button" className="recipe-json-button" onClick={() => setJsonModalOpen(true)}>{'{ }'} Intégration JSON</button>}</div><p>Une bonne recette mérite d'être gardée. Remplis les informations ci-dessous pour créer ton brouillon.</p></div>
     {savedDraft && <div className="draft-restore-banner"><div><strong>Un brouillon t'attend</strong><p>Tu peux reprendre ta dernière création enregistrée localement.</p></div><button type="button" onClick={restoreDraft}>Reprendre mon brouillon</button><button type="button" onClick={() => { clearDraft(); setSavedDraft(null); }}>Ignorer</button></div>}
     {draftMessage && <p className="draft-message" role="status">{draftMessage}</p>}
-    <form onSubmit={submit} className="create-layout"><div className="create-form-main"><section className="create-card"><div className="create-card-title"><span>01</span><div><h2>Les informations essentielles</h2><p>Donne envie de passer à table.</p></div></div><div className="form-grid"><label className="form-field form-full">Nom de la recette *<input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. Gratin de légumes de mamie"/></label><label className="form-field form-full">Description *<textarea required rows={4} maxLength={600} value={description} onChange={event => setDescription(event.target.value)} placeholder="Quelques mots pour présenter ta recette..."/></label><label className="form-field">Catégorie<select value={category} onChange={event => setCategory(event.target.value)}><option>Plats</option><option>Entrées</option><option>Desserts</option><option>Petit-déjeuner</option></select></label><label className="form-field">Difficulté<select value={difficulty} onChange={event => setDifficulty(event.target.value as 'Facile' | 'Moyen')}><option>Facile</option><option>Moyen</option></select></label><label className="form-field form-full">URL de photo (facultatif)<input type="url" value={image.startsWith('data:') ? '' : image} onChange={event => setImage(event.target.value)} placeholder="https://exemple.com/ma-recette.jpg"/></label><label className="form-field form-full">Ou choisir une photo sur ton appareil<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto}/><small>JPG, PNG ou WebP, maximum 2 Mo. Photo conservée en mémoire pour cette démonstration.</small></label>{photoError && <p className="form-error" role="alert">{photoError}</p>}{image && <button type="button" className="add-row-button" onClick={() => setImage('')}>Retirer la photo</button>}</div></section>
+    <form onSubmit={submit} className="create-layout"><div className="create-form-main"><section className="create-card"><div className="create-card-title"><span>01</span><div><h2>Les informations essentielles</h2><p>Donne envie de passer à table.</p></div></div><div className="form-grid"><label className="form-field form-full">Nom de la recette *<input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. Gratin de légumes de mamie"/></label><label className="form-field form-full">Description *<textarea required rows={4} maxLength={600} value={description} onChange={event => setDescription(event.target.value)} placeholder="Quelques mots pour présenter ta recette..."/></label><label className="form-field">Catégorie<select value={category} onChange={event => setCategory(event.target.value)}><option>Plats</option><option>Entrées</option><option>Desserts</option><option>Petit-déjeuner</option></select></label><label className="form-field">Difficulté<select value={difficulty} onChange={event => setDifficulty(event.target.value as 'Facile' | 'Moyen')}><option>Facile</option><option>Moyen</option></select></label><label className="form-field form-full">URL de photo (facultatif)<input type="url" value={image.startsWith('data:') ? '' : image} onChange={event => setImage(event.target.value)} placeholder="https://exemple.com/ma-recette.jpg"/></label><label className="form-field form-full">Ou choisir une photo sur ton appareil<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto}/><small>JPG, PNG ou WebP, maximum 2 Mo. Photo conservée en mémoire pour cette démonstration.</small></label>{image && <button type="button" className="draft-remove" onClick={() => setImage('')}>Retirer la photo</button>}{photoError && <p className="form-error" role="alert">{photoError}</p>}{image && <button type="button" className="add-row-button" onClick={() => setImage('')}>Retirer la photo</button>}</div></section>
       <section className="create-card"><div className="create-card-title"><span>02</span><div><h2>Temps et portions</h2><p>Pour que chacun puisse s'organiser.</p></div></div><div className="form-grid form-triple"><label className="form-field">Préparation (min)<input type="number" min="0" max="1440" value={prep} onChange={event => setPrep(Math.max(0, Number(event.target.value) || 0))}/></label><label className="form-field">Cuisson (min)<input type="number" min="0" max="1440" value={cook} onChange={event => setCook(Math.max(0, Number(event.target.value) || 0))}/></label><label className="form-field">Personnes<input type="number" min="1" max="12" value={servings} onChange={event => setServings(Math.max(1, Math.min(12, Number(event.target.value) || 1)))}/></label><label className="form-field">Repos (min)<input type="number" min="0" max="1440" value={rest} onChange={event => setRest(Math.max(0, Number(event.target.value) || 0))}/></label><label className="form-field">Budget<select value={budget} onChange={event => setBudget(event.target.value)}><option>Bon marché</option><option>Moyen</option><option>Assez cher</option></select></label></div></section>
-      <section className="create-card"><div className="create-card-title"><span>03</span><div><h2>Les ingrédients</h2><p>Les quantités sont indiquées pour {servings} personne{servings > 1 ? 's' : ''}.</p></div></div><div className="draft-list">{items.map((item, index) => <div key={item.id} className="draft-ingredient"><label className="form-field">Ingrédient {index + 1}<input required value={item.name} onChange={event => updateIngredient(item.id, 'name', event.target.value)} placeholder="Farine, tomate..."/></label><label className="form-field">Quantité<input required type="number" min="0" step="any" value={item.amount} onChange={event => updateIngredient(item.id, 'amount', event.target.value)} placeholder="150"/></label><label className="form-field">Unité<select value={item.unit} onChange={event => updateIngredient(item.id, 'unit', event.target.value)}><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">l</option><option value="">pièce(s)</option><option value="c. à soupe">c. à soupe</option><option value="c. à café">c. à café</option></select></label><button type="button" className="draft-remove" disabled={items.length === 1} onClick={() => setItems(current => current.filter(row => row.id !== item.id))} aria-label={`Supprimer l'ingrédient ${index + 1}`}><Glyph name="trash" size={18}/></button></div>)}</div><button type="button" className="add-row-button" onClick={addIngredient}><Glyph name="plus" size={18}/>Ajouter un ingrédient</button></section>
+      <section className="create-card"><div className="create-card-title"><span>03</span><div><h2>Les ingrédients</h2><p>Les quantités sont indiquées pour {servings} personne{servings > 1 ? 's' : ''}.</p></div></div><div className="draft-list">{items.map((item, index) => <div key={item.id} className="draft-ingredient"><label className="form-field">Ingrédient {index + 1}<input required value={item.name} onChange={event => updateIngredient(item.id, 'name', event.target.value)} placeholder="Farine, tomate..."/></label><label className="form-field">Quantité<input type="number" min="0" step="any" value={item.amount} onChange={event => updateIngredient(item.id, 'amount', event.target.value)} placeholder="150"/></label><label className="form-field">Unité<select value={item.unit} onChange={event => updateIngredient(item.id, 'unit', event.target.value)}><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">l</option><option value="">pièce(s)</option><option value="c. à soupe">c. à soupe</option><option value="c. à café">c. à café</option></select></label><button type="button" className="draft-remove" disabled={items.length === 1} onClick={() => setItems(current => current.filter(row => row.id !== item.id))} aria-label={`Supprimer l'ingrédient ${index + 1}`}><Glyph name="trash" size={18}/></button></div>)}</div><button type="button" className="add-row-button" onClick={addIngredient}><Glyph name="plus" size={18}/>Ajouter un ingrédient</button></section>
       <section className="create-card"><div className="create-card-title"><span>04</span><div><h2>Les étapes de préparation</h2><p>Une étape après l'autre, tout simplement.</p></div></div><div className="draft-list">{steps.map((step,index) => <div className="draft-step" key={step.id}><span className="draft-step-index">{String(index+1).padStart(2,'0')}</span><label className="form-field"><span className="sr-only">Étape {index + 1}</span><textarea required rows={3} value={step.value} onChange={event => setSteps(current => current.map(item => item.id === step.id ? {...item,value:event.target.value} : item))} placeholder="Décris cette étape..."/></label><button type="button" className="draft-remove" disabled={steps.length === 1} onClick={() => setSteps(current => current.filter(item => item.id !== step.id))} aria-label={`Supprimer l'étape ${index + 1}`}><Glyph name="trash" size={18}/></button></div>)}</div><button type="button" className="add-row-button" onClick={addStep}><Glyph name="plus" size={18}/>Ajouter une étape</button></section>
       <section className="create-card"><div className="create-card-title"><span>05</span><div><h2>Ustensiles</h2><p>Le matériel à prévoir pour cette recette.</p></div></div><div className="utensil-entry"><label className="form-field">Ajouter un ustensile<input value={utensilInput} onChange={event => setUtensilInput(event.target.value)} maxLength={70} placeholder="Ex. Fouet, four, casserole..." onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addUtensil(); } }}/></label><button type="button" className="add-row-button" onClick={addUtensil} disabled={!utensilInput.trim() || utensils.length >= 20}><Glyph name="plus" size={18}/>Ajouter</button></div><ul className="utensil-chip-list">{utensils.map(item => <li key={item}>{item}<button type="button" onClick={() => setUtensils(current => current.filter(value => value !== item))} aria-label={`Retirer ${item}`}>×</button></li>)}</ul></section>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="create-buttons"><a href="/recipes" onClick={event => {event.preventDefault();navigate('/recipes');}}>Annuler</a><button type="submit">{initialRecipe ? 'Enregistrer la recette' : 'Prévisualiser ma recette'} <Glyph name="arrow" size={18}/></button></div>
-    </div><aside className="create-sidebar"><div className="create-preview"><img src={image.trim() || demoImage} alt="Aperçu de la recette" onError={event => { event.currentTarget.src = demoImage; }}/><div><span className="card-category">Ma prochaine recette</span><h3>{title.trim() || 'Le titre de ta recette'}</h3><p>{description.trim() || 'Ta description apparaîtra ici...'}</p><span><Glyph name="clock" size={16}/>{formatTime(prep + cook + rest)} · {servings} pers.</span></div></div><div className="draft-disclaimer"><strong>Mode démonstration</strong><p>Les champs de ton brouillon sont enregistrés localement. Les photos choisies sur ton appareil ne survivent pas au rechargement. La publication arrivera avec l'API.</p></div></aside></form>
+      <label><input type="checkbox" checked={isPublic} onChange={event => setIsPublic(event.target.checked)}/> Recette publique</label>
+      <div className="create-buttons"><a href="/recipes" onClick={event => {event.preventDefault();navigate('/recipes');}}>Annuler</a><button type="submit" disabled={saving}>{initialRecipe ? 'Enregistrer la recette' : 'Enregistrer ma recette'} <Glyph name="arrow" size={18}/></button></div>
+    </div><aside className="create-sidebar"><div className="create-preview"><img src={(image === initialRecipe?.image ? initialPhoto : image.trim()) || demoImage} alt="Aperçu de la recette" onError={event => { event.currentTarget.src = demoImage; }}/><div><span className="card-category">Ma prochaine recette</span><h3>{title.trim() || 'Le titre de ta recette'}</h3><p>{description.trim() || 'Ta description apparaîtra ici...'}</p><span><Glyph name="clock" size={16}/>{formatTime(prep + cook + rest)} · {servings} pers.</span></div></div><div className="draft-disclaimer"><strong>Mode démonstration</strong><p>Les champs de ton brouillon sont enregistrés localement. Les photos choisies sur ton appareil ne survivent pas au rechargement. La publication arrivera avec l'API.</p></div></aside></form>
   </div>{jsonModalOpen && <RecipeJsonModal recipe={exportRecipe} onImport={importRecipe} onClose={() => setJsonModalOpen(false)}/>}
   {pendingImport && <ConfirmDialog title="Importer cette recette ?" description="L'import remplacera les champs actuels du formulaire, sans enregistrer automatiquement la recette." confirmLabel="Remplir le formulaire" onConfirm={applyImportedRecipe} onCancel={() => setPendingImport(null)}/>}</main>;
 }

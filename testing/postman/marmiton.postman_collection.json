@@ -376,6 +376,318 @@
           ]
         }
       ]
+    },
+    {
+      "name": "recipes",
+      "item": [
+        {
+          "name": "POST /auth/login (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (guest-write)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (invalid-import)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 2}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (invalid-image)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true, \"photo\": \"invalid\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (create)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Created UUID\", () => { const id = pm.response.json().id; pm.expect(id).to.match(/^[a-f0-9-]{36}$/); pm.environment.set(\"recipeId\", id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/recipes (owned)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Owner has recipes\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /recipes/{{recipeId}} (edit)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette modifi\\u00e9e\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Edited title\", () => pm.expect(pm.response.json().title).to.eql(\"Recette modifiée\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /media/00000000-0000-4000-8000-000000000000.png (missing-image)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/media/00000000-0000-4000-8000-000000000000.png"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /recipes/{{recipeId}} (delete)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/{{recipeId}} (deleted)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.environment.unset(\"recipeId\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

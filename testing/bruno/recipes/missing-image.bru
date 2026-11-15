@@ -1,0 +1,15 @@
+meta {
+  name: GET /media/00000000-0000-4000-8000-000000000000.png (missing-image)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/media/00000000-0000-4000-8000-000000000000.png
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 404", () => expect(res.getStatus()).to.equal(404));
+}

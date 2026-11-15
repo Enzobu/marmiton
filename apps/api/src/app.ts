@@ -5,11 +5,13 @@ import { registerAuth } from './auth.js';
 import type { SendResetMail } from './reset-mail.js';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
+import { imageStore } from './images.js';
+import { registerRecipeWrites } from './recipe-writes.js';
 import { registerCatalog } from './catalog.js';
 
 const healthResponse = z.object({ status: z.literal('ok'), service: z.literal('marmiton-api') });
 
-export function buildApp(options: { mail?: SendResetMail } = {}) {
+export function buildApp(options: { mail?: SendResetMail; uploadDirectory?: string } = {}) {
   const app = Fastify({ logger: true });
   app.register(cors, { origin: process.env.CORS_ORIGIN?.split(',').map(value => value.trim()) ?? ['http://localhost:5173'], methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] });
   app.register(rateLimit, { global: false });
@@ -17,6 +19,7 @@ export function buildApp(options: { mail?: SendResetMail } = {}) {
   const db = new PrismaClient();
   app.addHook('onClose', () => db.$disconnect());
   registerCatalog(app, db);
+  registerRecipeWrites(app, db, imageStore(options.uploadDirectory));
   app.after(() => registerAuth(app, db, options.mail));
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: 'Not Found' }));
   return app;

@@ -18,10 +18,10 @@ test('Drafts can be saved, resumed and cleared', () => {
   assert.match(editor, /restoreDraft/);
   assert.match(editor, /if \(initialRecipe \|\| savedDraft\) return/);
 });
-test('Extra metadata is persisted in the in-memory recipe record', () => {
+test('The editor sends metadata through the recipe write API', () => {
   assert.match(editor, /setRest/);
   assert.match(editor, /setBudget/);
   assert.match(editor, /setUtensils/);
-  assert.match(editor, /servings \};/);
-  assert.match(app, /recipePreparation\[recipe.id\] = \{ prep, cook, \.\.\.metadata \}/);
+  assert.match(editor, /times: \{ preparation: prep, cooking: cook, rest \}/);
+  assert.match(app, /body: JSON.stringify\(submission\)/);
 });

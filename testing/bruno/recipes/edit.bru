@@ -1,0 +1,54 @@
+meta {
+  name: PUT /recipes/{{recipeId}} (edit)
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/recipes/{{recipeId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "recipe": {
+      "schemaVersion": 1,
+      "title": "Recette modifi\u00e9e",
+      "description": "Fixture HTTP",
+      "category": "Plats",
+      "difficulty": "Facile",
+      "servings": 2,
+      "times": {
+        "preparation": 5,
+        "cooking": 10,
+        "rest": 0
+      },
+      "budget": "Bon march\u00e9",
+      "ingredients": [
+        {
+          "name": "Farine",
+          "quantity": 25,
+          "unit": "g"
+        }
+      ],
+      "utensils": [
+        "Bol"
+      ],
+      "steps": [
+        "M\u00e9langer."
+      ],
+      "imageUrl": null
+    },
+    "isPublic": true
+  }
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Edited title", () => expect(res.getBody().title).to.equal("Recette modifiée"));
+}

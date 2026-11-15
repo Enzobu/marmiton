@@ -1,0 +1,54 @@
+meta {
+  name: POST /recipes (invalid-image)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/recipes
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "recipe": {
+      "schemaVersion": 1,
+      "title": "Recette HTTP temporaire",
+      "description": "Fixture HTTP",
+      "category": "Plats",
+      "difficulty": "Facile",
+      "servings": 2,
+      "times": {
+        "preparation": 5,
+        "cooking": 10,
+        "rest": 0
+      },
+      "budget": "Bon march\u00e9",
+      "ingredients": [
+        {
+          "name": "Farine",
+          "quantity": 25,
+          "unit": "g"
+        }
+      ],
+      "utensils": [
+        "Bol"
+      ],
+      "steps": [
+        "M\u00e9langer."
+      ],
+      "imageUrl": null
+    },
+    "isPublic": true,
+    "photo": "invalid"
+  }
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

@@ -17,8 +17,8 @@ test('Destructive actions use accessible confirmation dialogs', () => {
   assert.match(account, /setPendingDelete\(recipe\)/);
   assert.match(editor, /applyImportedRecipe/);
 });
-test('UX feedback reports demo actions without misleading API success', () => {
-  assert.match(app, /notify\('Recette de démonstration enregistrée.'/);
+test('UX feedback reports recipe and favorite actions', () => {
+  assert.match(app, /notify\('Recette enregistrée.'/);
   assert.match(app, /'Recette ajoutée aux favoris.'/);
   assert.match(app, /notify\(alreadySaved/);
   assert.match(app, /<ToastRegion toast=\{toast\}/);
