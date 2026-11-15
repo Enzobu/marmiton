@@ -104,6 +104,15 @@ export const recipePreparation: Record<string | number, Preparation> = {
   8: { prep: 20, cook: 35, rest: 0, budget: 'Bon marché', utensils: ['Four', 'Moule à tarte'] }
 };
 
+export function ingredientsForRecipe(recipe: Recipe): Ingredient[] {
+  return recipe.quantities ?? ingredientQuantities[recipe.id] ??
+    recipe.ingredients.map(name => ({ name, amount: null, icon: 'other' }));
+}
+
+export function ingredientBaseServings(recipe: Recipe): number {
+  return recipe.quantities ? recipe.servings ?? BASE_SERVINGS : BASE_SERVINGS;
+}
+
 export function formatQuantity(ingredient: Ingredient, servings: number, baseServings = BASE_SERVINGS): string {
   if (ingredient.amount === null) return 'À votre goût';
   const scaled = ingredient.amount * servings / baseServings;

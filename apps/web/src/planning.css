@@ -1,0 +1,12 @@
+.planning-page{padding-block:40px;max-width:860px}
+.planning-page>p{color:var(--color-muted);margin-block:12px}
+.planning-page>a,.planning-link{color:var(--color-accent);font-weight:750}
+.planning-list{list-style:none;padding:0;margin:24px 0;background:var(--color-paper);border:1px solid var(--color-line);border-radius:12px}
+.planning-list>li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+.planning-list>li+li{border-top:1px solid var(--color-line)}
+.planning-list label{display:flex;align-items:center;gap:12px;flex:1;min-width:0;overflow-wrap:anywhere;cursor:pointer}
+.planning-list input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;accent-color:var(--color-accent)}
+.planning-list small{display:block;color:var(--color-muted);margin-top:3px}
+.planning-checked>span{text-decoration:line-through;color:var(--color-muted)}
+.planning-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
+@media print{.planning-actions{display:none}}
