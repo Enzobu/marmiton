@@ -38,3 +38,14 @@ export async function privateImageUrl(url: string, token: string, signal: AbortS
   if (!response.ok) throw new ApiError(response.status);
   return URL.createObjectURL(await response.blob());
 }
+
+export function requestPasswordReset(request: { email: string } | { token: string }) {
+  return apiRequest('/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders('token' in request ? request.token : null) },
+    body: JSON.stringify({
+      ...('email' in request ? { email: request.email } : {}),
+      theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+    }),
+  });
+}

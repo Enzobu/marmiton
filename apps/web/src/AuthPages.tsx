@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { apiRequest, ApiError } from './api';
+import { apiRequest, ApiError, requestPasswordReset } from './api';
 import type { Profile } from './AccountPages';
 import './auth.css';
 
 type LoginResult = { accessToken: string; profile: Profile };
-type AuthProps = { page: 'login' | 'forgot' | 'reset'; navigate: (path: string) => void; onLogin: (session: LoginResult, remember: boolean) => void; onReset: () => void };
+type AuthProps = { page: 'login' | 'forgot' | 'reset'; navigate: (path: string) => void; onLogin: (session: LoginResult, remember: boolean) => void; onReset: () => void; sessionPending: boolean; signedIn: boolean };
 
 export const AUTH_ROUTES = {
   login: '/login',
@@ -55,7 +55,7 @@ function EmailField({ value, onChange, autoComplete = 'email' }: { value: string
   return <div className="auth-field"><label htmlFor="auth-email">Adresse e-mail</label><div className="auth-input-wrap"><Icon name="mail"/><input id="auth-email" type="email" required maxLength={254} autoComplete={autoComplete} placeholder="exemple@domaine.fr" value={value} onChange={event => onChange(event.target.value)}/></div></div>;
 }
 
-export function AuthPage({ page, navigate, onLogin, onReset }: AuthProps) {
+export function AuthPage({ page, navigate, onLogin, onReset, sessionPending, signedIn }: AuthProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -79,17 +79,21 @@ export function AuthPage({ page, navigate, onLogin, onReset }: AuthProps) {
       inform('Ce lien est invalide. Demande un nouveau lien.', 'error');
       return;
     }
-    const routes = { login: '/auth/login', forgot: '/auth/forgot-password', reset: '/auth/reset-password' };
-    const body = page === 'login' ? { email, password, remember } : page === 'forgot' ? { email } : { token, password };
     setBusy(true);
     inform('');
     try {
-      const result = await apiRequest<LoginResult>(routes[page], {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      });
-      if (page === 'login') onLogin(result, remember);
-      if (page === 'forgot') inform('Si l’adresse est associée à ton compte, tu recevras un lien de réinitialisation.');
-      if (page === 'reset') onReset();
+      if (page === 'forgot') {
+        await requestPasswordReset({ email });
+        inform('Si l’adresse est associée à ton compte, tu recevras un lien de réinitialisation.');
+      } else {
+        const result = await apiRequest<LoginResult>(page === 'login' ? '/auth/login' : '/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(page === 'login' ? { email, password, remember } : { token, password }),
+        });
+        if (page === 'login') onLogin(result, remember);
+        else onReset();
+      }
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 0;
       inform(status === 429 ? 'Trop de tentatives. Réessaie dans une minute.'
@@ -123,7 +127,11 @@ export function AuthPage({ page, navigate, onLogin, onReset }: AuthProps) {
           {feedback && <div className={`auth-alert ${feedbackType === 'error' ? 'auth-alert-error' : ''}`} role={feedbackType === 'error' ? 'alert' : 'status'}>{feedback}</div>}
           <button className="auth-primary" type="submit" disabled={busy}>{page === 'login' ? 'Se connecter' : page === 'forgot' ? 'Demander un lien' : 'Modifier mon mot de passe'}<Icon name="arrow" size={18}/></button>
         </form>}
-        {page !== 'login' && <div className="auth-bottom"><RouteLink to="/login" navigate={navigate}>Retour à la connexion</RouteLink></div>}
+        {page !== 'login' && !sessionPending && <div className="auth-bottom">
+          <RouteLink to={signedIn ? '/profile' : '/login'} navigate={navigate}>
+            {signedIn ? 'Retour au profil' : 'Retour à la connexion'}
+          </RouteLink>
+        </div>}
       </section>
       <aside className="auth-story" aria-label="Inspiration cuisine">
         <div className="auth-story-photo" role="img" aria-label="Table garnie de bons plats faits maison"/>

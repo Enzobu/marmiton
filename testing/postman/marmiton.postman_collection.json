@@ -422,7 +422,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\"theme\": \"dark\"}"
             }
           },
           "event": [

@@ -3,10 +3,11 @@ import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { emailSchema, hashPassword, passwordSchema, verifyPassword } from './password.js';
-import { sendResetMail, type SendResetMail } from './reset-mail.js';
+import { sendResetMail, type ResetMailTheme, type SendResetMail } from './reset-mail.js';
 
 const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128), remember: z.boolean().optional() }).strict();
+const resetRequestSchema = z.object({ theme: z.enum(['light', 'dark']).default('light') });
 const resetSchema = z.object({ token: tokenSchema, password: passwordSchema }).strict();
 export const profileSelect = { email: true, firstName: true, lastName: true, bio: true, newsletter: true, publicRecipes: true, avatar: true } as const;
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -67,7 +68,7 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
 
   app.post('/auth/forgot-password', throttle(':forgot-password', 5), async (request, reply) => {
     reply.header('cache-control', 'no-store');
-    const prepareLink = async (owner: { id: number; email: string }) => {
+    const prepareLink = async (owner: { id: number; email: string }, theme: ResetMailTheme) => {
       const token = newToken();
       const tokenDigest = digest(token);
       await db.$transaction([
@@ -76,7 +77,7 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
       ]);
       return async () => {
         try {
-          await mail(owner.email, token);
+          await mail(owner.email, token, theme);
         } catch (error) {
           await db.passwordReset.deleteMany({ where: { digest: tokenDigest } });
           throw error;
@@ -87,11 +88,12 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
     if (request.headers.authorization !== undefined) {
       const session = await requireSession(request, reply, db);
       if (!session) return;
-      if (!z.object({}).strict().safeParse(request.body ?? {}).success) {
+      const parsed = resetRequestSchema.strict().safeParse(request.body ?? {});
+      if (!parsed.success) {
         return reply.code(400).send({ error: 'Invalid reset request' });
       }
       try {
-        const sendLink = await prepareLink({ id: session.ownerId, email: session.owner.email });
+        const sendLink = await prepareLink({ id: session.ownerId, email: session.owner.email }, parsed.data.theme);
         await sendLink();
       } catch {
         request.log.error('Password reset email delivery failed');
@@ -100,11 +102,11 @@ export function registerAuth(app: FastifyInstance, db: PrismaClient, mail: SendR
       return reply.code(202).send({ message: 'Reset email sent' });
     }
 
-    const parsed = z.object({ email: emailSchema }).strict().safeParse(request.body);
+    const parsed = resetRequestSchema.extend({ email: emailSchema }).strict().safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'Invalid email' });
     const owner = await db.owner.findUnique({ where: { email: parsed.data.email }, select: { id: true, email: true } });
     if (owner) {
-      const sendLink = await prepareLink(owner);
+      const sendLink = await prepareLink(owner, parsed.data.theme);
       void sendLink().catch(() => request.log.error('Password reset email delivery failed'));
     }
     return reply.code(202).send({ message: 'If the address is registered, a link will be sent' });

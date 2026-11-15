@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { PrismaClient } from '@prisma/client';
 import { buildApp } from './app.js';
+import { renderResetMail, type ResetMailTheme } from './reset-mail.js';
 import { hashPassword, verifyPassword } from './password.js';
 
 test('Passwords use salted hashes and reject incorrect values', async () => {
@@ -18,8 +19,8 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
   const password = 'Fixture-Password42';
   const replacement = 'Replacement-Password43';
   const originalHash = await hashPassword(password);
-  const delivered: { recipient: string; token: string }[] = [];
-  const app = buildApp({ mail: async (recipient, token) => { delivered.push({ recipient, token }); } });
+  const delivered: { recipient: string; token: string; theme: ResetMailTheme }[] = [];
+  const app = buildApp({ mail: async (recipient, token, theme) => { delivered.push({ recipient, token, theme }); } });
   try {
     await db.owner.upsert({
       where: { id: 2 }, create: { id: 2, email, firstName: 'Test', lastName: 'Owner', passwordHash: originalHash },
@@ -42,11 +43,12 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
     assert.deepEqual(requested.json(), missing.json());
     assert.equal(delivered.length, 1);
     assert.equal(delivered[0].recipient, email);
-    const requestFromProfile = () => app.inject({ method: 'POST', url: '/auth/forgot-password', headers: activeHeaders });
+    const requestFromProfile = () => app.inject({ method: 'POST', url: '/auth/forgot-password', headers: activeHeaders, payload: { theme: 'dark' } });
     assert.equal((await app.inject({ method: 'POST', url: '/auth/forgot-password', headers, payload: {} })).statusCode, 401);
     assert.equal((await app.inject({ method: 'POST', url: '/auth/forgot-password', headers: activeHeaders, payload: { email: 'other@example.invalid' } })).statusCode, 400);
     assert.equal((await requestFromProfile()).statusCode, 202);
     assert.deepEqual(delivered.map(link => link.recipient), [email, email]);
+    assert.deepEqual(delivered.map(link => link.theme), ['light', 'dark']);
     assert.notEqual(delivered[0].token, delivered[1].token);
     assert.equal((await app.inject({ method: 'POST', url: '/auth/change-password', headers: activeHeaders })).statusCode, 404);
     const resetToken = delivered[1].token;
@@ -60,5 +62,17 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
     await db.owner.deleteMany({ where: { email } });
     await app.close();
     await db.$disconnect();
+  }
+});
+
+test('Reset email uses the requested palette and preserves the reset link in HTML and plain text', () => {
+  const token = 'a'.repeat(43);
+  const publicUrl = 'https://marmiton.example.invalid';
+  const expectedLink = publicUrl + '/reset-password#token=' + token;
+  for (const [theme, background] of [['light', '#fffdf9'], ['dark', '#161b18']] as const) {
+    const mail = renderResetMail(publicUrl, token, theme);
+    assert.ok(mail.html.includes(`bgcolor="${background}"`));
+    assert.ok(mail.html.includes(`href="${expectedLink}"`));
+    assert.ok(mail.text.includes(expectedLink));
   }
 });
