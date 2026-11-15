@@ -102,7 +102,7 @@ export function AuthPage({ page, navigate, onLogin }: AuthProps) {
     <div className="auth-layout">
       <section className="auth-card" aria-labelledby="auth-title">
         <RouteLink to="/" navigate={navigate} className="auth-back"><Icon name="back" size={16}/> Retour à l’accueil</RouteLink>
-        <div className="auth-mark"><Icon name={page === 'forgot' || page === 'reset' ? 'lock' : page === 'verify' ? 'mail' : 'chef'} size={27}/></div>
+        <div className="auth-mark"><Icon name={page === 'forgot' || page === 'reset' ? 'lock' : 'chef'} size={27}/></div>
         <span className="section-kicker">{page === 'login' ? 'Ton espace gourmand' : 'Sécurité du compte'}</span>
         <h1 id="auth-title">{titleByPage[page]}</h1>
         <p className="auth-lead">{page === 'login' ? 'Connecte-toi pour retrouver tes bonnes idées et tes recettes préférées.' : page === 'forgot' ? 'Renseigne ton adresse e-mail pour recevoir un lien de réinitialisation.' : 'Choisis un mot de passe solide pour protéger ton compte.'}</p>
