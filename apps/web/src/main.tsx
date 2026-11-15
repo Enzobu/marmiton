@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { recipePath, type Recipe } from './recipe-data';
+import { formatTime, recipePath, type Recipe } from './recipe-data';
 import { RecipeDetail, RecipeCreate, type RecipeSubmission } from './RecipePages';
 import { parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES } from './AuthPages';
@@ -44,7 +44,7 @@ function RecipeCard({ recipe, saved, onToggle, onOpen }: { recipe: Recipe; saved
     <div className="card-content">
       <span className="card-category">{recipe.category}</span>
       <a className="card-title-button" href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }}><h3>{recipe.title}</h3></a>
-      <div className="card-meta"><span className="rating"><Icon name="star" size={15}/>{recipe.rating.toFixed(1)} <span className="reviews">({recipe.reviews})</span></span><span><Icon name="clock" size={15}/>{recipe.time} min</span></div>
+      <div className="card-meta"><span className="rating"><Icon name="star" size={15}/>{recipe.rating.toFixed(1)} <span className="reviews">({recipe.reviews})</span></span><span><Icon name="clock" size={15}/>{formatTime(recipe.time)}</span></div>
     </div>
   </article>;
 }

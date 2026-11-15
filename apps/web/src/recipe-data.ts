@@ -110,3 +110,10 @@ export function formatQuantity(ingredient: Ingredient, servings: number, baseSer
 }
 
 export function recipePath(id: Recipe['id']): string { return `/recipes/${id}`; }
+
+export function formatTime(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return `${hours}h${remainder ? String(remainder).padStart(2, '0') : ''}`;
+}
