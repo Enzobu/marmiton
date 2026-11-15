@@ -1,4 +1,6 @@
-type ThemePreference = 'light' | 'system' | 'dark';
+import './theme-quick-access.css';
+
+export type ThemePreference = 'light' | 'system' | 'dark';
 type Props = { value: ThemePreference; onChange: (value: ThemePreference) => void };
 
 function ThemeIcon({ kind }: { kind: ThemePreference }) {
@@ -8,14 +10,23 @@ function ThemeIcon({ kind }: { kind: ThemePreference }) {
   return <svg {...common}><path d="M20.4 15.8A8.5 8.5 0 0 1 8.2 3.6 8.5 8.5 0 1 0 20.4 15.8Z"/></svg>;
 }
 
-const options: { value: ThemePreference; label: string }[] = [
-  { value: 'light', label: 'Clair' },
-  { value: 'system', label: 'Système' },
-  { value: 'dark', label: 'Sombre' }
-];
+const themes = {
+  system: { label: 'Système', next: 'light' },
+  light: { label: 'Clair', next: 'dark' },
+  dark: { label: 'Sombre', next: 'system' }
+} satisfies Record<ThemePreference, { label: string; next: ThemePreference }>;
 
 export function ThemeToggle({ value, onChange }: Props) {
-  return <div className="account-theme-segments" role="group" aria-label="Apparence du site" data-selected={value}>
-    {options.map(option => <button key={option.value} type="button" title={option.label} aria-label={option.label} aria-pressed={value === option.value} className={value === option.value ? 'is-active' : ''} onClick={() => onChange(option.value)}><ThemeIcon kind={option.value}/></button>)}
-  </div>;
+  const { label, next } = themes[value];
+  const description = `Thème actuel : ${label}. Passer au thème ${themes[next].label}.`;
+
+  return <button
+    type="button"
+    className="theme-quick-trigger"
+    aria-label={description}
+    title={description}
+    onClick={() => onChange(next)}
+  >
+    <ThemeIcon kind={value}/>
+  </button>;
 }

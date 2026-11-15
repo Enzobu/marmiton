@@ -5,11 +5,10 @@ import { filterCatalogRecipes, parseCatalogQuery, serializeCatalogQuery, type Ca
 import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
-import { ThemeQuickAccess } from './ThemeQuickAccess';
+import { ThemeToggle, type ThemePreference } from './ThemeToggle';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import './dark.css';
-type ThemePreference = 'light' | 'dark' | 'system';
 
 const categories = ['Toutes les recettes', 'Entrées', 'Plats', 'Desserts', 'Petit-déjeuner'];
 const categoryInitials: Record<string, string> = { 'Entrées': 'E', 'Plats': 'P', 'Desserts': 'D', 'Petit-déjeuner': 'PD' };
@@ -205,7 +204,7 @@ function App() {
         <nav className="desktop-navigation" aria-label="Navigation principale">
           <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
         </nav>
-        <div className="header-actions"><ThemeQuickAccess value={themePreference} onChange={updateThemePreference} path={path}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap" ref={profileMenuRef}>
+        <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap" ref={profileMenuRef}>
           <button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
             <span className="profile-avatar">{demoUser.avatar ? <img src={demoUser.avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (demoUser.firstName.charAt(0) + demoUser.lastName.charAt(0)).toUpperCase()}</span><span>{demoUser.firstName}</span>
           </button>
@@ -253,7 +252,7 @@ function App() {
     {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); notify('Compte de démonstration activé.', 'info'); }}/>}
-    {accountRoute && (accountRoute !== 'favorites' || demoUser) && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode} themePreference={themePreference} onThemeChange={updateThemePreference}/>}
+    {accountRoute && (accountRoute !== 'favorites' || demoUser) && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}
     <ToastRegion toast={toast} onDismiss={() => setToast(null)}/>
     <footer className="site-footer"><div><span className="footer-brand">Les petits<span>plats.</span></span><p>De bonnes idées, de bons petits plats.</p></div><span>Fait maison, avec amour.</span></footer>
