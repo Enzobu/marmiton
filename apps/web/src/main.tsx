@@ -1,3 +1,5 @@
+import { WeeklyMenu } from './WeeklyMenu';
+import type { PlannedMeal } from './weekly-menu';
 import { ShoppingList } from './ShoppingList';
 import { accountStorageKey, mergeShoppingItems, readAccountList, type ShoppingItem } from './local-planning';
 import { RECIPE_DIFFICULTIES } from './recipe-json';
@@ -153,7 +155,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   useEffect(() => {
-    if (!sessionPending && !sessionError && !profile && (['/favorites', '/profile', '/my-recipes', '/recipes/new', '/shopping-list'].includes(path) || path.endsWith('/edit'))) navigate('/login');
+    if (!sessionPending && !sessionError && !profile && (['/favorites', '/profile', '/my-recipes', '/recipes/new', '/shopping-list', '/weekly-menu'].includes(path) || path.endsWith('/edit'))) navigate('/login');
   }, [path, profile, sessionPending, sessionError]);
   useEffect(() => {
     const onPop = () => {
@@ -197,21 +199,64 @@ function App() {
   }, [needsOwnedRecipes, accessToken, recipeRevision]);
   const accountRoute = ({ '/profile': 'profile', '/my-recipes': 'my-recipes', '/favorites': 'favorites' } as Record<string, AccountRoute>)[path];
   const isShoppingList = path === '/shopping-list';
+  const isWeeklyMenu = path === '/weekly-menu';
+  function addItemsToShopping(email: string, meals: { recipe: Recipe; servings: number }[]) {
+    const key = accountStorageKey('shopping', email);
+    const additions = meals.flatMap(({ recipe, servings }) =>
+      ingredientsForRecipe(recipe).map(({ name, amount, unit }) => ({
+        name, amount: amount === null ? null : amount * servings / ingredientBaseServings(recipe),
+        unit, checked: false, id: globalThis.crypto?.randomUUID?.() ?? String(Math.random()),
+      })));
+    const next = mergeShoppingItems(readAccountList<ShoppingItem>(key), additions);
+    localStorage.setItem(key, JSON.stringify(next));
+  }
   function addToShopping(recipe: Recipe, servings: number) {
     if (sessionPending || sessionError) {
       notify('Impossible de vérifier la connexion pour le moment.', 'error');
       return;
     }
     if (!profile) { navigate('/login'); return; }
-    const key = accountStorageKey('shopping', profile.email);
     try {
-      const additions = ingredientsForRecipe(recipe).map(({ name, amount, unit }) => ({
-        name, amount: amount === null ? null : amount * servings / ingredientBaseServings(recipe),
-        unit, checked: false, id: globalThis.crypto?.randomUUID?.() ?? String(Math.random()),
-      }));
-      const next = mergeShoppingItems(readAccountList<ShoppingItem>(key), additions);
-      localStorage.setItem(key, JSON.stringify(next));
+      addItemsToShopping(profile.email, [{ recipe, servings }]);
       notify('Ingrédients ajoutés à la liste de courses.');
+    } catch { notify('Impossible d’enregistrer la liste dans ce navigateur.', 'error'); }
+  }
+  function planMeal(recipe: Recipe, servings: number, date: string) {
+    if (sessionPending || sessionError) {
+      notify('Impossible de vérifier la connexion pour le moment.', 'error');
+      return false;
+    }
+    if (!profile) { navigate('/login'); return false; }
+    try {
+      const key = accountStorageKey('weekly-menu', profile.email);
+      const meals = readAccountList<PlannedMeal>(key);
+      meals.push({ id: globalThis.crypto?.randomUUID?.() ?? String(Math.random()), date, servings, recipeId: recipe.id, title: recipe.title });
+      localStorage.setItem(key, JSON.stringify(meals));
+      notify('Repas ajouté au menu de la semaine.');
+      return true;
+    } catch {
+      notify('Impossible d’enregistrer le repas dans ce navigateur.', 'error');
+      return false;
+    }
+  }
+  async function addWeeklyMenuToShopping(meals: PlannedMeal[]) {
+    if (!profile) return;
+    const email = profile.email;
+    let entries;
+    try {
+      const ids = [...new Set(meals.map(meal => meal.recipeId))];
+      const loaded = await Promise.all(ids.map(async id => [id, fromApiRecipe(
+        await apiRequest<ApiRecipe>(recipePath(id), { headers: authHeaders(accessToken) })
+      )] as const));
+      const recipes = new Map(loaded);
+      entries = meals.map(meal => ({ recipe: recipes.get(meal.recipeId)!, servings: meal.servings }));
+    } catch {
+      notify('Impossible de charger toutes les recettes du menu. Vérifiez qu’elles sont toujours disponibles.', 'error');
+      return;
+    }
+    try {
+      addItemsToShopping(email, entries);
+      notify('Menu ajouté à la liste de courses.');
     } catch { notify('Impossible d’enregistrer la liste dans ce navigateur.', 'error'); }
   }
   const isHome = path === '/';
@@ -321,7 +366,7 @@ function App() {
   const selectedRecipe = localRecipe ?? currentDetail?.recipe;
   const detailLoading = Boolean(detailId?.includes('-') && !localRecipe && !currentDetail);
   const editorialLoading = needsOwnedRecipes && (!!accessToken && (ownedRecipesPending || (ownedRecipesLoaded !== accessToken && !ownedRecipesError)));
-  const isNotFound = !isHome && !isCatalog && !isCreate && !isShoppingList && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));
+  const isNotFound = !isHome && !isCatalog && !isCreate && !isShoppingList && !isWeeklyMenu && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));
   const visible = useMemo(() => catalog?.data?.items.map(fromApiRecipe) ?? [], [catalog]);
 
   const total = currentCatalog?.data?.total ?? 0;
@@ -402,6 +447,7 @@ function App() {
             <button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button>
             <button onClick={() => { setProfileOpen(false); navigate('/recipes/new'); }}>Créer une recette</button>
             <button onClick={() => { setProfileOpen(false); navigate('/shopping-list'); }}>Ma liste de courses</button>
+            <button onClick={() => navigate('/weekly-menu')}>Menu de la semaine</button>
             <button className="profile-logout" onClick={logout}>Se déconnecter</button>
           </div>}
         </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
@@ -439,10 +485,11 @@ function App() {
       </section>}
       {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Carnet de recettes</span><h2>Ajoutez une recette à votre carnet</h2><p>Enregistrez les ingrédients et les étapes de préparation pour retrouver la recette à tout moment.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>}
-    {isShoppingList && sessionPending && <p className="section-container" role="status">Vérification de la connexion…</p>}
-    {isShoppingList && sessionError && <p className="section-container" role="alert">Impossible de vérifier la connexion. Rechargez la page.</p>}
+    {(isShoppingList || isWeeklyMenu) && sessionPending && <p className="section-container" role="status">Vérification de la connexion…</p>}
+    {(isShoppingList || isWeeklyMenu) && sessionError && <p className="section-container" role="alert">Impossible de vérifier la connexion. Rechargez la page.</p>}
     {isShoppingList && profile && <ShoppingList key={profile.email} email={profile.email}/>}
-    {selectedRecipe && <RecipeDetail addToShopping={servings => addToShopping(selectedRecipe, servings)} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
+    {isWeeklyMenu && profile && <WeeklyMenu key={profile.email} email={profile.email} onAddToShopping={addWeeklyMenuToShopping}/>}
+    {selectedRecipe && <RecipeDetail onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => addToShopping(selectedRecipe, servings)} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} signedIn={Boolean(profile)} sessionPending={sessionPending} onReset={() => { invalidateSession(); navigate('/login'); notify('Mot de passe réinitialisé.'); }} onLogin={({ profile: user, accessToken: token }, remember) => {

@@ -10,3 +10,13 @@
 .planning-checked>span{text-decoration:line-through;color:var(--color-muted)}
 .planning-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
 @media print{.planning-actions{display:none}}
+.planning-day{padding:16px;margin-top:16px;border:1px solid var(--color-line);border-radius:12px;background:var(--color-paper)}
+.planning-day h2{font-size:20px}
+.planning-day p{margin-top:8px;color:var(--color-muted)}
+.planning-day .planning-list{border:0;margin:10px 0 0}
+.planning-day .planning-list>li{padding:10px 0}
+.planning-day .planning-list a{color:var(--color-ink);font-weight:750;overflow-wrap:anywhere}
+.planning-date{display:grid;gap:6px;font-size:13px;font-weight:700}
+.planning-date input{padding:10px;background:var(--color-page);color:var(--color-ink);border:1px solid var(--color-line);border-radius:8px}
+.planning-actions .planning-date~button{align-self:end}
+.planning-actions button:disabled{opacity:.55;cursor:default}
