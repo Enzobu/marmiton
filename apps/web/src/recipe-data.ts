@@ -15,6 +15,7 @@ export type Recipe = {
   quantities?: Ingredient[];
   preparation?: Preparation;
   isPublic?: boolean;
+  privateImage?: boolean;
 };
 
 export const recipes: Recipe[] = [

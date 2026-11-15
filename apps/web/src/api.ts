@@ -8,6 +8,10 @@ export class ApiError extends Error {
   }
 }
 
+export function authHeaders(token: string | null): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(apiBase + path, options);
   if (!response.ok) throw new ApiError(response.status);
@@ -26,5 +30,11 @@ export type CatalogPage = { items: ApiRecipe[]; page: number; limit: number; tot
 
 export function fromApiRecipe({ image, badge, ...recipe }: ApiRecipe): Recipe {
   const imageUrl = image?.startsWith('/') && !image.startsWith('//') ? apiBase + image : image;
-  return { ...recipe, image: imageUrl ?? '', badge: badge ?? undefined };
+  return { ...recipe, privateImage: image?.startsWith('/media/') && !recipe.isPublic, image: imageUrl ?? '', badge: badge ?? undefined };
+}
+
+export async function privateImageUrl(url: string, token: string, signal: AbortSignal) {
+  const response = await fetch(url, { headers: authHeaders(token), signal });
+  if (!response.ok) throw new ApiError(response.status);
+  return URL.createObjectURL(await response.blob());
 }

@@ -37,7 +37,7 @@ test('Favorites and personal recipe controls have working callbacks', () => {
 });
 
 test('Recipe edit route reuses the creation form with initial data', () => {
-  assert.match(app, /editRecipe && <RecipeCreate/);
+  assert.match(app, /editRecipe && profile && <RecipeCreate/);
   assert.match(recipePages, /initialRecipe\?: Recipe/);
   assert.match(recipePages, /initialRecipe\?\.id \?\? Date.now\(\)/);
 });

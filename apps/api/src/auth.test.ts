@@ -14,7 +14,7 @@ test('Passwords use salted hashes and reject incorrect values', async () => {
 
 test('Owner session expires and reset revokes sessions and consumes its token', { skip: !process.env.DATABASE_URL }, async () => {
   const db = new PrismaClient();
-  const email = 'owner@example.invalid';
+  const email = 'auth-test@example.invalid';
   const password = 'Fixture-Password42';
   const replacement = 'Replacement-Password43';
   const originalHash = await hashPassword(password);
@@ -22,7 +22,7 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
   const app = buildApp({ mail: async (_email, token) => { resetToken = token; } });
   try {
     await db.owner.upsert({
-      where: { id: 1 }, create: { id: 1, email, firstName: 'Test', lastName: 'Owner', passwordHash: originalHash },
+      where: { id: 2 }, create: { id: 2, email, firstName: 'Test', lastName: 'Owner', passwordHash: originalHash },
       update: { passwordHash: originalHash },
     });
     const login = await app.inject({ method: 'POST', url: '/auth/login', payload: { email, password } });
@@ -47,8 +47,7 @@ test('Owner session expires and reset revokes sessions and consumes its token', 
     assert.equal((await app.inject({ url: '/auth/me', headers: activeHeaders })).statusCode, 401);
     assert.equal((await app.inject({ method: 'POST', url: '/auth/login', payload: { email, password: replacement } })).statusCode, 200);
   } finally {
-    await db.owner.updateMany({ where: { id: 1 }, data: { passwordHash: originalHash } });
-    await db.session.deleteMany({ where: { ownerId: 1 } });
+    await db.owner.deleteMany({ where: { email } });
     await app.close();
     await db.$disconnect();
   }

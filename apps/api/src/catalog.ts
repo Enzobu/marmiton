@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { requireSession } from './auth.js';
 
 const querySchema = z.object({
   q: z.string().trim().max(150).optional(),
@@ -72,6 +73,11 @@ export function registerCatalog(app: FastifyInstance, db: PrismaClient) {
     const id = z.string().uuid().safeParse((request.params as { id: string }).id);
     if (!id.success) return reply.code(400).send({ error: 'Invalid recipe UUID' });
     const recipe = await db.recipe.findFirst({ where: { id: id.data, isPublic: true }, include: recipeRelations });
+    if (!recipe && request.headers.authorization) {
+      if (!await requireSession(request, reply, db)) return;
+      const owned = await db.recipe.findUnique({ where: { id: id.data }, include: recipeRelations });
+      if (owned) return recipeResponse(owned);
+    }
     if (!recipe) return reply.code(404).send({ error: 'Recipe not found' });
     return recipeResponse(recipe);
   });

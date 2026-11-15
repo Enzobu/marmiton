@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
-import { RecipeDetail, RecipeCreate } from './RecipePages';
+import { recipePath, type Recipe } from './recipe-data';
+import { RecipeDetail, RecipeCreate, type RecipeSubmission } from './RecipePages';
 import { parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
-import { apiRequest, ApiError, fromApiRecipe, type ApiRecipe, type CatalogPage } from './api';
+import { apiRequest, ApiError, authHeaders, fromApiRecipe, type ApiRecipe, type CatalogPage } from './api';
 import { readSession, saveSession } from './session';
 import { ThemeToggle, type ThemePreference } from './ThemeToggle';
 import { createRoot } from 'react-dom/client';
@@ -57,6 +57,9 @@ function App() {
   const [sortFilter, setSortFilter] = useState<CatalogSort>(() => parseCatalogQuery(window.location.search).sort);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [favorites, setFavorites] = useState<Recipe['id'][]>([]);
+  const [ownedRecipesPending, setOwnedRecipesPending] = useState(false);
+  const [ownedRecipesError, setOwnedRecipesError] = useState(false);
+  const [recipeRevision, setRecipeRevision] = useState(0);
   const [createdRecipes, setCreatedRecipes] = useState<Recipe[]>([]);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastId = useRef(0);
@@ -142,7 +145,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   useEffect(() => {
-    if (!sessionPending && !sessionError && !profile && ['/favorites', '/profile', '/my-recipes'].includes(path)) navigate('/login');
+    if (!sessionPending && !sessionError && !profile && (['/favorites', '/profile', '/my-recipes', '/recipes/new'].includes(path) || path.endsWith('/edit'))) navigate('/login');
   }, [path, profile, sessionPending, sessionError]);
   useEffect(() => {
     const onPop = () => {
@@ -167,6 +170,23 @@ function App() {
   const detailId = /^\/recipes\/([\da-f-]+)$/i.exec(path)?.[1];
   const editId = /^\/recipes\/([\da-f-]+)\/edit$/i.exec(path)?.[1];
   const editRecipe = editId ? createdRecipes.find(recipe => String(recipe.id) === editId) : undefined;
+  const needsOwnedRecipes = Boolean(editId || path === '/my-recipes');
+  const [ownedRecipesLoaded, setOwnedRecipesLoaded] = useState<string | null>(null);
+  useEffect(() => {
+    if (!accessToken || !needsOwnedRecipes) return;
+    const controller = new AbortController();
+    setOwnedRecipesPending(true);
+    setOwnedRecipesError(false);
+    apiRequest<ApiRecipe[]>('/me/recipes', { headers: authHeaders(accessToken), signal: controller.signal })
+      .then(items => { setCreatedRecipes(items.map(fromApiRecipe)); setOwnedRecipesLoaded(accessToken); })
+      .catch(error => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) invalidateSession();
+        else setOwnedRecipesError(true);
+      })
+      .finally(() => { if (!controller.signal.aborted) setOwnedRecipesPending(false); });
+    return () => controller.abort();
+  }, [needsOwnedRecipes, accessToken, recipeRevision]);
   const accountRoute = ({ '/profile': 'profile', '/my-recipes': 'my-recipes', '/favorites': 'favorites' } as Record<string, AccountRoute>)[path];
   const isHome = path === '/';
   const activeNav = path === '/' ? 'home'
@@ -177,16 +197,45 @@ function App() {
   const isCatalog = path === '/recipes';
   const isCreate = path === '/recipes/new';
   const authPage = (Object.entries(AUTH_ROUTES).find(([, value]) => value === path)?.[0] ?? null) as keyof typeof AUTH_ROUTES | null;
-  const addCreatedRecipe = (recipe: Recipe, ingredients: Ingredient[], prep: number, cook: number, metadata: { rest: number; budget: string; utensils: string[]; servings: number }) => {
-    ingredientQuantities[recipe.id] = ingredients;
-    recipePreparation[recipe.id] = { prep, cook, ...metadata };
-    setCreatedRecipes(current => [recipe, ...current.filter(item => item.id !== recipe.id)]);
-    notify('Recette de démonstration enregistrée.');
+  function invalidateSession() {
+    saveSession(null);
+    setAccessToken(null);
+    setProfile(null);
+    setCreatedRecipes([]);
+    setDetail(undefined);
+    setFavorites([]);
+    setFavoriteRecipes([]);
+  }
+
+  const addCreatedRecipe = async (submission: RecipeSubmission, id?: Recipe['id']) => {
+    try {
+      const response = await apiRequest<ApiRecipe>(id ? `/recipes/${id}` : '/recipes', {
+        method: id ? 'PUT' : 'POST',
+        headers: { ...authHeaders(accessToken), 'Content-Type': 'application/json' },
+        body: JSON.stringify(submission),
+      });
+      const recipe = fromApiRecipe(response);
+      setCreatedRecipes(current => [recipe, ...current.filter(item => item.id !== recipe.id)]);
+      setRecipeRevision(revision => revision + 1);
+      notify('Recette enregistrée.');
+      return recipe;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      throw new Error('Impossible d’enregistrer la recette.');
+    }
   };
-  const deleteCreatedRecipe = (id: Recipe['id']) => {
-    setCreatedRecipes(current => current.filter(recipe => recipe.id !== id));
-    setFavorites(current => current.filter(value => value !== id));
-    notify('Recette de démonstration supprimée.');
+  const deleteCreatedRecipe = async (id: Recipe['id']) => {
+    try {
+      await apiRequest(`/recipes/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
+      setCreatedRecipes(current => current.filter(recipe => recipe.id !== id));
+      setFavorites(current => current.filter(value => value !== id));
+      setFavoriteRecipes(current => current.filter(recipe => recipe.id !== id));
+      setRecipeRevision(revision => revision + 1);
+      notify('Recette supprimée.');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      notify('Impossible de supprimer la recette.', 'error');
+    }
   };
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -208,23 +257,27 @@ function App() {
       .then(data => setCatalog({ key: catalogKey, data }))
       .catch(() => { if (!controller.signal.aborted) setCatalog({ key: catalogKey, error: true }); });
     return () => controller.abort();
-  }, [catalogKey, isHome, isCatalog]);
-  const localRecipe = detailId ? createdRecipes.find(recipe => String(recipe.id) === detailId) : undefined;
+  }, [catalogKey, isHome, isCatalog, recipeRevision]);
+  const localRecipe = detailId && profile ? createdRecipes.find(recipe => String(recipe.id) === detailId) : undefined;
   useEffect(() => {
     if (!detailId || localRecipe || !detailId.includes('-')) return;
     const controller = new AbortController();
-    apiRequest<ApiRecipe>(`/recipes/${detailId}`, { signal: controller.signal })
+    apiRequest<ApiRecipe>(`/recipes/${detailId}`, { headers: authHeaders(accessToken), signal: controller.signal })
       .then(recipe => setDetail({ id: detailId, recipe: fromApiRecipe(recipe) }))
       .catch(error => {
-        if (!controller.signal.aborted) setDetail({ id: detailId, error: !(error instanceof ApiError && [400, 404].includes(error.status)) });
+        if (!controller.signal.aborted) {
+          if (error instanceof ApiError && error.status === 401) invalidateSession();
+          setDetail({ id: detailId, error: !(error instanceof ApiError && [400, 401, 404].includes(error.status)) });
+        }
       });
     return () => controller.abort();
-  }, [detailId, localRecipe]);
+  }, [detailId, localRecipe, accessToken, recipeRevision]);
   const currentCatalog = catalog?.key === catalogKey ? catalog : undefined;
   const currentDetail = detail?.id === detailId ? detail : undefined;
   const selectedRecipe = localRecipe ?? currentDetail?.recipe;
   const detailLoading = Boolean(detailId?.includes('-') && !localRecipe && !currentDetail);
-  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error;
+  const editorialLoading = needsOwnedRecipes && (!!accessToken && (ownedRecipesPending || (ownedRecipesLoaded !== accessToken && !ownedRecipesError)));
+  const isNotFound = !isHome && !isCatalog && !isCreate && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));
   const visible = useMemo(() => catalog?.data?.items.map(fromApiRecipe) ?? [], [catalog]);
   const allRecipes = Array.from(new Map([...visible, ...favoriteRecipes, ...createdRecipes].map(recipe => [recipe.id, recipe])).values());
   const total = currentCatalog?.data?.total ?? 0;
@@ -256,6 +309,8 @@ function App() {
     saveSession(null);
     setAccessToken(null);
     setProfile(null);
+    setCreatedRecipes([]);
+    setDetail(undefined);
     setFavorites([]);
     setFavoriteRecipes([]);
     setOnlyFavorites(false);
@@ -318,9 +373,9 @@ function App() {
       </section>}
       {isHome && <section className="newsletter-section"><div className="newsletter-inner"><div className="newsletter-deco" aria-hidden="true"><Icon name="chef" size={72}/></div><div><span className="section-kicker">Cuisiner, c'est partager</span><h2>Les meilleures histoires commencent autour d'une table.</h2><p>Garde tes recettes préférées sous la main et fais le plein d'idées gourmandes.</p></div><button onClick={() => navigate("/recipes/new")}><Icon name="plus" size={19}/> Ajouter une recette</button></div></section>}
     </main>}
-    {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
-    {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
-    {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {selectedRecipe && <RecipeDetail token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
+    {isCreate && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
+    {editRecipe && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onLogin={({ profile: user, accessToken: token }, remember) => {
       saveSession(token, remember);
       setSessionError(false);
@@ -331,6 +386,8 @@ function App() {
     {accountRoute && sessionPending && <p role="status">Vérification de la connexion…</p>}
     {accountRoute && sessionError && <p role="alert">Impossible de vérifier la connexion. Recharge la page.</p>}
     {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
+    {editorialLoading && <p className="section-container" role="status">Chargement de tes recettes…</p>}
+    {needsOwnedRecipes && ownedRecipesError && <p className="section-container" role="alert">Impossible de charger tes recettes.</p>}
     {detailLoading && <p className="section-container" role="status">Chargement de la recette…</p>}
     {currentDetail?.error && <p className="section-container" role="alert">Impossible de charger la recette.</p>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}
