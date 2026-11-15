@@ -120,6 +120,9 @@ function App() {
     const apply = () => {
       const dark = themePreference === 'dark' || (themePreference === 'system' && media.matches);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      const favicon = document.getElementById('app-favicon');
+      const iconPath = dark ? '/favicon-dark.svg' : '/favicon.svg';
+      if (favicon && favicon.getAttribute('href') !== iconPath) favicon.setAttribute('href', iconPath);
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#161b18' : '#fffdf9');
     };
     apply();
