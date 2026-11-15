@@ -1,3 +1,4 @@
+import { MealDateForm } from './WeeklyMenu';
 import { CookingMode } from './CookingMode';
 import { SelectField } from './SelectField';
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
@@ -48,7 +49,7 @@ function IngredientPicture({ icon }: { icon: Ingredient['icon'] }) {
   </span>;
 }
 
-export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping }: { recipe: Recipe; addToShopping: (servings: number) => void } & SharedProps) {
+export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping, onPlanMeal }: { recipe: Recipe; addToShopping: (servings: number) => void; onPlanMeal: (servings: number, date: string) => boolean } & SharedProps) {
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
@@ -69,6 +70,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
           <p className="panel-hint">Les quantités s’adaptent automatiquement au nombre de personnes.</p>
           <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, ingredientBaseServings(recipe))}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
           {ingredients.length > 0 && <div className="planning-actions"><button type="button" className="detail-outline-button" onClick={() => addToShopping(servings)}>Ajouter à la liste de courses</button>{token && <a className="planning-link" href="/shopping-list" onClick={event => { event.preventDefault(); navigate('/shopping-list'); }}>Voir la liste</a>}</div>}
+          <MealDateForm servings={servings} onPlan={date => onPlanMeal(servings, date)}/>
           <div className="utensil-block"><h3>Ustensiles</h3><ul>{metadata.utensils.map(item => <li key={item}><Glyph name="chef" size={17}/>{item}</li>)}</ul></div>
           <div className="panel-note"><strong>Petit conseil</strong><p>Cochez les ingrédients à mesure que vous les préparez.</p></div>
         </aside>
