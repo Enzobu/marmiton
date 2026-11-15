@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Marmiton-specific Dokploy adapter. Version verification will be added with the API.
+# Marmiton-specific Dokploy adapter with verification of the deployed build revision.
 set -euo pipefail
 set +x
 
@@ -7,9 +7,14 @@ set +x
 : "${DOKPLOY_API_KEY:?Missing DOKPLOY_API_KEY}"
 : "${DOKPLOY_COMPOSE_ID:?Missing DOKPLOY_COMPOSE_ID}"
 : "${EXPECTED_SOURCE_REF:?Missing EXPECTED_SOURCE_REF}"
+: "${EXPECTED_COMMIT_SHA:?Missing EXPECTED_COMMIT_SHA}"
+: "${APP_VERSION_URL:?Missing APP_VERSION_URL}"
 
 [[ "$DOKPLOY_URL" == https://* ]] || { echo "::error::Dokploy URL must use HTTPS" >&2; exit 1; }
 [[ "$EXPECTED_SOURCE_REF" == refs/heads/main ]] || { echo "::error::Only main may be deployed" >&2; exit 1; }
+
+[[ "$EXPECTED_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid expected SHA" >&2; exit 1; }
+[[ "$APP_VERSION_URL" == https://* ]] || { echo "::error::APP_VERSION_URL must use HTTPS" >&2; exit 1; }
 
 base="${DOKPLOY_URL%/}"
 meta="$(mktemp)"
@@ -50,12 +55,8 @@ for ((i=1; i<=attempts; i++)); do
 done
 [[ "$completed" == true ]] || { echo "::error::No confirmed successful deployment" >&2; exit 1; }
 
-# Optional availability check: no version/SHA claim until /api/version exists.
-if [[ -n "${APP_HEALTH_URL:-}" ]]; then
-  [[ "$APP_HEALTH_URL" == https://* ]] || { echo "::error::APP_HEALTH_URL must use HTTPS" >&2; exit 1; }
-  code="$(curl -sS --connect-timeout 10 --max-time 30 -o "$health_body" -w '%{http_code}' "$APP_HEALTH_URL")"
-  [[ "$code" =~ ^2[0-9][0-9]$ ]] || { echo "::error::Application healthcheck failed (HTTP $code)" >&2; exit 1; }
-  echo "Deployment $id finished and application healthcheck succeeded; revision NOT verified."
-else
-  echo "::warning::Deployment $id finished; healthcheck and deployed revision NOT verified."
-fi
+code="$(curl -sS --connect-timeout 10 --max-time 30 -o "$health_body" -w '%{http_code}' "$APP_VERSION_URL")"
+[[ "$code" == 200 ]] || { echo "::error::Application version endpoint failed (HTTP $code)" >&2; exit 1; }
+actual_sha="$(jq -er '.sha | strings' "$health_body")"
+[[ "$actual_sha" == "$EXPECTED_COMMIT_SHA" ]] || { echo "::error::Deployed SHA differs from the tested SHA" >&2; exit 1; }
+echo "Verified Dokploy deployment $id, database connectivity and commit $actual_sha."

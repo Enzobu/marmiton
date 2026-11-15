@@ -33,7 +33,5 @@ workflow:
     only_from: main
     trigger: push_on_main
     preproduction: false
-    # Intégration Dokploy activable uniquement après configuration
-    # des secrets et de l'adaptateur Dokploy ; contrôle SHA différé jusqu'à l'API.
     cd_status: enabled_on_main
-    sha_verification: deferred_until_api
+    sha_verification: required

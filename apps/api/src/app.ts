@@ -8,11 +8,12 @@ import { PrismaClient } from '@prisma/client';
 import { registerAccount } from './account.js';
 import { imageStore } from './images.js';
 import { registerRecipeWrites } from './recipe-writes.js';
+import { registerVersion } from './version.js';
 import { registerCatalog } from './catalog.js';
 
 const healthResponse = z.object({ status: z.literal('ok'), service: z.literal('marmiton-api') });
 
-export function buildApp(options: { mail?: SendResetMail; uploadDirectory?: string } = {}) {
+export function buildApp(options: { mail?: SendResetMail; uploadDirectory?: string; revision?: string } = {}) {
   const app = Fastify({ logger: true });
   app.register(cors, { origin: process.env.CORS_ORIGIN?.split(',').map(value => value.trim()) ?? ['http://localhost:5173'], methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] });
   app.register(rateLimit, { global: false });
@@ -20,6 +21,7 @@ export function buildApp(options: { mail?: SendResetMail; uploadDirectory?: stri
   const db = new PrismaClient();
   app.addHook('onClose', () => db.$disconnect());
   registerCatalog(app, db);
+  registerVersion(app, db, options.revision);
   const images = imageStore(options.uploadDirectory);
   registerRecipeWrites(app, db, images);
   registerAccount(app, db, images);
