@@ -6,25 +6,22 @@ const auth = readFileSync(new URL('../src/AuthPages.tsx', import.meta.url), 'utf
 const css = readFileSync(new URL('../src/auth.css', import.meta.url), 'utf8');
 
 test('Authentication has dedicated deep links', () => {
-  for (const route of ['/login', '/register', '/forgot-password', '/verify-email', '/reset-password']) {
+  for (const route of ['/login', '/forgot-password', '/reset-password']) {
     assert.ok(auth.includes(route), route);
   }
   assert.match(main, /authPage && <AuthPage/);
   assert.match(main, /!selectedRecipe && !authPage/);
 });
 
-test('Mock login is explicit, not a real authenticated session', () => {
-  assert.match(auth, /compte de démonstration/);
-  assert.match(auth, /Aucun compte n’a été créé/);
-  assert.match(auth, /aucun e-mail n’a été envoyé/i);
-  assert.match(main, /setDemoUser/);
-  assert.doesNotMatch(main, /(?:localStorage|sessionStorage)\.setItem\(['\"](?:auth|session|token|password|demoUser)/i);
+test('Login uses the API and restores the session on reload', () => {
+  assert.match(auth, /'\/auth\/login'/);
+  assert.match(auth, /'\/auth\/reset-password'/);
+  assert.match(main, /apiRequest<Profile>\('\/auth\/me'/);
+  assert.match(main, /saveSession\(token, remember\)/);
 });
 
-test('Registration and password recovery offer accessible forms', () => {
+test('Login and password recovery offer accessible forms', () => {
   assert.match(auth, /type="email"/);
-  assert.match(auth, /autoComplete="given-name"/);
-  assert.match(auth, /autoComplete="family-name"/);
   assert.match(auth, /autoComplete="new-password"/);
   assert.match(auth, /aria-pressed=\{show\}/);
   assert.match(auth, /role=\{feedbackType === 'error' \? 'alert' : 'status'\}/);

@@ -1,10 +1,9 @@
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
-import type { DemoUser } from './AuthPages';
 import { recipePath, type Recipe } from './recipe-data';
 import { ConfirmDialog } from './UiFeedback';
 import './account.css';
 
-export type Profile = DemoUser & { avatar?: string; bio: string; newsletter: boolean; publicRecipes: boolean };
+export type Profile = { firstName: string; lastName: string; email: string; avatar?: string | null; bio: string; newsletter: boolean; publicRecipes: boolean };
 export type AccountRoute = 'profile' | 'my-recipes' | 'favorites';
 type Props = {
   page: AccountRoute;
@@ -63,7 +62,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
 
   const requireProfile = page !== 'favorites';
   if (!profile && requireProfile) {
-    return <main className="account-guest"><span className="section-kicker">Ton espace personnel</span><h1>Connecte-toi pour continuer</h1><p>Pour le moment, tu peux explorer ces pages avec le compte de démonstration.</p><button className="account-primary" onClick={() => navigate('/login')}>Découvrir la connexion</button></main>;
+    return <main className="account-guest"><span className="section-kicker">Ton espace personnel</span><h1>Connecte-toi pour continuer</h1><p>Connecte-toi pour accéder à ton espace personnel.</p><button className="account-primary" onClick={() => navigate('/login')}>Découvrir la connexion</button></main>;
   }
 
   const source = page === 'favorites' ? recipes.filter(recipe => favorites.includes(recipe.id)) : myRecipes;

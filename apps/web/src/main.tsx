@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ingredientQuantities, recipePreparation, recipePath, type Recipe, type Ingredient } from './recipe-data';
 import { RecipeDetail, RecipeCreate } from './RecipePages';
 import { parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
-import { AuthPage, AUTH_ROUTES, type DemoUser } from './AuthPages';
+import { AuthPage, AUTH_ROUTES } from './AuthPages';
 import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
 import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
 import { apiRequest, ApiError, fromApiRecipe, type ApiRecipe, type CatalogPage } from './api';
+import { readSession, saveSession } from './session';
 import { ThemeToggle, type ThemePreference } from './ThemeToggle';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
@@ -67,7 +68,26 @@ function App() {
     const timeout = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timeout);
   }, [toast]);
-  const [demoUser, setDemoUser] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [accessToken, setAccessToken] = useState(readSession);
+  const [sessionPending, setSessionPending] = useState(Boolean(accessToken));
+  const [sessionError, setSessionError] = useState(false);
+  useEffect(() => {
+    if (!accessToken) return;
+    const controller = new AbortController();
+    apiRequest<Profile>('/auth/me', { headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal })
+      .then(user => { setProfile(user); setSessionError(false); })
+      .catch(error => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) {
+          saveSession(null);
+          setProfile(null);
+          setAccessToken(null);
+        } else { setSessionError(true); }
+      })
+      .finally(() => { if (!controller.signal.aborted) setSessionPending(false); });
+    return () => controller.abort();
+  }, [accessToken]);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -122,8 +142,8 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
   useEffect(() => {
-    if (path === '/favorites' && !demoUser) navigate('/login');
-  }, [path, demoUser]);
+    if (!sessionPending && !sessionError && !profile && ['/favorites', '/profile', '/my-recipes'].includes(path)) navigate('/login');
+  }, [path, profile, sessionPending, sessionError]);
   useEffect(() => {
     const onPop = () => {
       setProfileOpen(false);
@@ -212,7 +232,7 @@ function App() {
   const hasCatalogFilters = Boolean(search || category !== 'Toutes les recettes' || difficultyFilter || budgetFilter || maxTimeFilter !== null || sortFilter !== 'relevance');
 
   const toggleFavorite = (id: Recipe['id']) => {
-    if (!demoUser) { navigate('/login'); return; }
+    if (!profile) { navigate('/login'); return; }
     const alreadySaved = favorites.includes(id);
     const recipe = allRecipes.find(item => item.id === id) ?? selectedRecipe;
     if (recipe && !alreadySaved) setFavoriteRecipes(current => [...current.filter(item => item.id !== id), recipe]);
@@ -221,9 +241,26 @@ function App() {
     notify(alreadySaved ? 'Recette retirée des favoris.' : 'Recette ajoutée aux favoris.');
   };
   const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
-  const openFavorites = () => { setMenuOpen(false); if (!demoUser) { navigate('/login'); return; } setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); navigate('/favorites'); };
+  const openFavorites = () => { setMenuOpen(false); if (!profile) { navigate('/login'); return; } setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); navigate('/favorites'); };
   const reset = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
   const browse = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
+  const logout = async () => {
+    try {
+      if (accessToken) await apiRequest('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401)) {
+        notify('Impossible de fermer la session. Réessaie.', 'error');
+        return;
+      }
+    }
+    saveSession(null);
+    setAccessToken(null);
+    setProfile(null);
+    setFavorites([]);
+    setFavoriteRecipes([]);
+    setOnlyFavorites(false);
+    navigate('/');
+  };
   const openRecipe = (recipe: Recipe) => navigate(recipePath(recipe.id));
 
   return <>
@@ -234,18 +271,17 @@ function App() {
         <nav className="desktop-navigation" aria-label="Navigation principale">
           <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
         </nav>
-        <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{demoUser ? <div className="profile-menu-wrap" ref={profileMenuRef}>
+        <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{profile ? <div className="profile-menu-wrap" ref={profileMenuRef}>
           <button className="profile-trigger" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
-            <span className="profile-avatar">{demoUser.avatar ? <img src={demoUser.avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (demoUser.firstName.charAt(0) + demoUser.lastName.charAt(0)).toUpperCase()}</span><span>{demoUser.firstName}</span>
+            <span className="profile-avatar">{profile.avatar ? <img src={profile.avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (profile.firstName.charAt(0) + profile.lastName.charAt(0)).toUpperCase()}</span><span>{profile.firstName}</span>
           </button>
           {profileOpen && <div className="profile-dropdown">
-            <div className="profile-dropdown-head"><strong>{demoUser.firstName} {demoUser.lastName}</strong><span>{demoUser.email}</span></div>
+            <div className="profile-dropdown-head"><strong>{profile.firstName} {profile.lastName}</strong><span>{profile.email}</span></div>
             <button onClick={() => { setProfileOpen(false); navigate('/profile'); }}>Mon profil</button>
             <button onClick={() => { setProfileOpen(false); navigate('/my-recipes'); }}>Mes recettes</button>
             <button onClick={() => { setProfileOpen(false); openFavorites(); }}>Mes favoris</button>
             <button onClick={() => { setProfileOpen(false); navigate('/recipes/new'); }}>Créer une recette</button>
-            <button className="profile-logout" onClick={() => { setDemoUser(null); setFavorites([]); setFavoriteRecipes([]); setOnlyFavorites(false); setProfileOpen(false); navigate('/'); }}>Se déconnecter</button>
-            <span className="profile-demo-tag">Compte de démonstration, non persistant</span>
+            <button className="profile-logout" onClick={logout}>Se déconnecter</button>
           </div>}
         </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Ouvrir le menu"><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
       </div>
@@ -285,8 +321,16 @@ function App() {
     {selectedRecipe && <RecipeDetail key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && <RecipeCreate developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && <RecipeCreate key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
-    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onDemoLogin={(user: DemoUser) => { setDemoUser({ ...user, bio: "", newsletter: false, publicRecipes: true }); setProfileOpen(false); navigate("/"); notify('Compte de démonstration activé.', 'info'); }}/>}
-    {accountRoute && (accountRoute !== 'favorites' || demoUser) && <AccountPage key={accountRoute + (demoUser?.email ?? 'guest')} page={accountRoute} profile={demoUser} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setDemoUser} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
+    {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} onLogin={({ profile: user, accessToken: token }, remember) => {
+      saveSession(token, remember);
+      setSessionError(false);
+      setProfile(user);
+      setAccessToken(token);
+      navigate('/');
+    }}/>}
+    {accountRoute && sessionPending && <p role="status">Vérification de la connexion…</p>}
+    {accountRoute && sessionError && <p role="alert">Impossible de vérifier la connexion. Recharge la page.</p>}
+    {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={allRecipes} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={setProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
     {detailLoading && <p className="section-container" role="status">Chargement de la recette…</p>}
     {currentDetail?.error && <p className="section-container" role="alert">Impossible de charger la recette.</p>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}

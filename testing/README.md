@@ -16,3 +16,9 @@ npm run dev:api
 ```
 
 Le seed réutilise huit recettes de démonstration avec des UUID fixes. Il peut être relancé sans vider la base, dupliquer les recettes ni écraser leurs modifications.
+
+## Compte propriétaire
+
+Après les migrations, injecter `OWNER_EMAIL`, `OWNER_FIRST_NAME`, `OWNER_LAST_NAME` et `OWNER_PASSWORD` en variables d’environnement lors du lancement de `node apps/api/dist/create-owner.js`. Compiler l’API avant cette commande. Dans Docker, exécuter la commande dans le service `api` avec ces mêmes variables. La commande laisse intact un compte déjà créé.
+
+Pour les collections avec authentification, utiliser uniquement une base de test et le compte fictif de la CI (`owner@example.invalid`, mot de passe de fixture `Fixture-Password42`). La collection vérifie connexion, profil, révocation et échecs. La réinitialisation valide de bout en bout est couverte par les tests d’intégration avec un faux transport SMTP. Configurer `PUBLIC_WEB_URL` et les paramètres `SMTP_*` pour l’envoi réel.

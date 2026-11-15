@@ -1,0 +1,20 @@
+meta {
+  name: GET /auth/me (revoked)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/auth/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+  bru.deleteVar("accessToken");
+}

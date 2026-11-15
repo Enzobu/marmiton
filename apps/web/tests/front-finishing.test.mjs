@@ -11,11 +11,11 @@ test('Brand uses uppercase L in header and footer', () => {
 });
 
 test('Guests are redirected to login for every favorite entry point', () => {
-  assert.match(app, /const toggleFavorite = \(id: [^)]*\) => \{\s*if \(!demoUser\) \{ navigate\('\/login'\); return; \}/);
-  assert.match(app, /const openFavorites = \(\) => \{ setMenuOpen\(false\); if \(!demoUser\) \{ navigate\('\/login'\); return; \}/);
-  assert.match(app, /if \(path === '\/favorites' && !demoUser\) navigate\('\/login'\)/);
-  assert.match(app, /accountRoute !== 'favorites' \|\| demoUser/);
-  assert.match(app, /setDemoUser\(null\); setFavorites\(\[\]\)/);
+  assert.match(app, /const toggleFavorite = \(id: [^)]*\) => \{\s*if \(!profile\) \{ navigate\('\/login'\); return; \}/);
+  assert.match(app, /const openFavorites = \(\) => \{ setMenuOpen\(false\); if \(!profile\) \{ navigate\('\/login'\); return; \}/);
+  assert.match(app, /!profile && \['\/favorites', '\/profile', '\/my-recipes'\]\.includes\(path\)/);
+  assert.match(app, /accountRoute && profile/);
+  assert.match(app, /setProfile\(null\);\s*setFavorites\(\[\]\)/);
   assert.match(app, /onToggle=\{toggleFavorite\}/);
   assert.match(app, /toggleFavorite=\{toggleFavorite\}/);
 });

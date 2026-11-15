@@ -1,0 +1,23 @@
+meta {
+  name: POST /auth/login (bad-login)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "owner@example.invalid",
+    "password": "wrong"
+  }
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+  bru.deleteVar("accessToken");
+}
