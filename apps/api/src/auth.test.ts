@@ -69,7 +69,7 @@ test('Reset email uses the requested palette and preserves the reset link in HTM
   const token = 'a'.repeat(43);
   const publicUrl = 'https://marmiton.example.invalid';
   const expectedLink = publicUrl + '/reset-password#token=' + token;
-  for (const [theme, background] of [['light', '#fffdf9'], ['dark', '#161b18']] as const) {
+  for (const [theme, background] of [['light', '#fffdf9'], ['dark', '#191817']] as const) {
     const mail = renderResetMail(publicUrl, token, theme);
     assert.ok(mail.html.includes(`bgcolor="${background}"`));
     assert.ok(mail.html.includes(`href="${expectedLink}"`));

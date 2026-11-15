@@ -125,7 +125,7 @@ function App() {
       const favicon = document.getElementById('app-favicon');
       const iconPath = dark ? '/favicon-dark.svg' : '/favicon.svg';
       if (favicon && favicon.getAttribute('href') !== iconPath) favicon.setAttribute('href', iconPath);
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#161b18' : '#fffdf9');
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#191817' : '#fffdf9');
     };
     apply();
     media.addEventListener('change', apply);

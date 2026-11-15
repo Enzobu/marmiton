@@ -6,7 +6,7 @@ export type SendResetMail = (email: string, token: string, theme: ResetMailTheme
 // Match the app's light and dark palettes. Use a deeper orange for the light button's text contrast.
 const palette = {
   light: { page: '#fffdf9', paper: '#ffffff', ink: '#2b2723', muted: '#77716a', line: '#eee8e0', accent: '#b6481b', buttonText: '#ffffff' },
-  dark: { page: '#161b18', paper: '#222923', ink: '#f3eee5', muted: '#b8b8ad', line: '#3b453d', accent: '#ffac78', buttonText: '#161b18' },
+  dark: { page: '#191817', paper: '#252322', ink: '#f3eee5', muted: '#beb5ad', line: '#47423f', accent: '#ffac78', buttonText: '#191817' },
 };
 
 export function renderResetMail(publicUrl: string, token: string, theme: ResetMailTheme) {
