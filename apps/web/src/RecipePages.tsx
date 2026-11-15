@@ -3,7 +3,7 @@ import { clearDraft, readDraft, saveDraft, validateRecipeImage, type RecipeDraft
 import { validateRecipeJson, type RecipeJson } from './recipe-json';
 import { RecipeJsonModal } from './RecipeJsonModal';
 import { ConfirmDialog } from './UiFeedback';
-import { BASE_SERVINGS, formatQuantity, ingredientQuantities, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
+import { BASE_SERVINGS, formatQuantity, formatTime, ingredientQuantities, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import './recipe-pages.css';
 
 import { useAuthenticatedImage } from './useAuthenticatedImage';
@@ -44,13 +44,6 @@ function IngredientPicture({ icon }: { icon: Ingredient['icon'] }) {
   </span>;
 }
 
-function formatTime(minutes: number) {
-  if (!minutes) return '—';
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return hours ? `${hours} h${rest ? ` ${rest.toString().padStart(2, '0')}` : ''}` : `${minutes} min`;
-}
-
 export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token }: { recipe: Recipe } & SharedProps) {
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
@@ -63,7 +56,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
       <nav className="breadcrumbs" aria-label="Fil d’Ariane"><a href="/" onClick={event => { event.preventDefault(); navigate('/'); }}>Accueil</a><span>/</span><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}>Recettes</a><span>/</span><span aria-current="page">{recipe.title}</span></nav>
       <div className="detail-intro"><div><span className="section-kicker">La recette du moment · {recipe.category}</span><h1>{recipe.title}</h1><p>{recipe.description}</p><div className="detail-rating"><Glyph name="star" size={17}/><strong>{recipe.rating.toFixed(1).replace('.', ',')} / 5</strong><span>· {recipe.reviews} avis de démonstration</span></div></div><div className="detail-actions"><button className={`detail-outline-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-pressed={favorite}><Glyph name="heart"/>{favorite ? 'Dans mes favoris' : 'Sauvegarder'}</button><button className="detail-icon-button" onClick={() => window.print()} aria-label="Imprimer la recette" title="Imprimer"><Glyph name="print"/></button></div></div>
       <div className="detail-photo">{image && <img src={image} alt={recipe.title}/>}<div className="detail-photo-note">Une recette à cuisiner avec amour</div></div>
-      <div className="detail-stats" aria-label="Informations de la recette"><div><Glyph name="clock" size={22}/><span>Préparation</span><strong>{formatTime(metadata.prep)}</strong></div><div><Glyph name="clock" size={22}/><span>Cuisson</span><strong>{formatTime(metadata.cook)}</strong></div><div><Glyph name="clock" size={22}/><span>Repos</span><strong>{formatTime(metadata.rest)}</strong></div><div><Glyph name="chef" size={23}/><span>Difficulté</span><strong>{recipe.difficulty}</strong></div><div><Glyph name="wallet" size={22}/><span>Budget</span><strong>{metadata.budget}</strong></div></div>
+      <div className="detail-stats" aria-label="Informations de la recette"><div><Glyph name="clock" size={22}/><span>Préparation</span><strong>{metadata.prep ? formatTime(metadata.prep) : '—'}</strong></div><div><Glyph name="clock" size={22}/><span>Cuisson</span><strong>{metadata.cook ? formatTime(metadata.cook) : '—'}</strong></div><div><Glyph name="clock" size={22}/><span>Repos</span><strong>{metadata.rest ? formatTime(metadata.rest) : '—'}</strong></div><div><Glyph name="chef" size={23}/><span>Difficulté</span><strong>{recipe.difficulty}</strong></div><div><Glyph name="wallet" size={22}/><span>Budget</span><strong>{metadata.budget}</strong></div></div>
       <div className="detail-columns">
         <aside className="ingredients-panel"><div className="panel-heading"><div><span className="section-kicker">Avant de commencer</span><h2>Ingrédients</h2></div><span className="panel-count">{ingredients.length} ingrédients</span></div>
           <div className="servings-control"><div><Glyph name="people" size={20}/><span>Pour combien de personnes ?</span></div><div className="servings-stepper"><button type="button" onClick={() => setServings(current => Math.max(1, current - 1))} disabled={servings <= 1} aria-label="Diminuer le nombre de personnes"><Glyph name="minus" size={17}/></button><output aria-live="polite">{servings}</output><button type="button" onClick={() => setServings(current => Math.min(12, current + 1))} disabled={servings >= 12} aria-label="Augmenter le nombre de personnes"><Glyph name="plus" size={17}/></button></div></div>

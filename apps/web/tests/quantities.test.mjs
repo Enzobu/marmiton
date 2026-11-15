@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BASE_SERVINGS, ingredientQuantities, formatQuantity, recipePath, recipes } from '../src/recipe-data.ts';
+import { BASE_SERVINGS, ingredientQuantities, formatQuantity, formatTime, recipePath, recipes } from '../src/recipe-data.ts';
 
 test('Ingredient amounts scale proportionally with servings', () => {
   const flour = ingredientQuantities[4].find(item => item.name === 'Farine');
@@ -25,4 +25,12 @@ test('All seeded recipes have navigable detail and ingredients', () => {
     assert.match(recipePath(recipe.id), /^\/recipes\/\d+$/);
     assert.ok(ingredientQuantities[recipe.id].length);
   }
+});
+
+test('Recipe durations use compact hours and zero-padded minutes', () => {
+  assert.equal(formatTime(0), '0 min');
+  assert.equal(formatTime(59), '59 min');
+  assert.equal(formatTime(60), '1h');
+  assert.equal(formatTime(137), '2h17');
+  assert.equal(formatTime(965), '16h05');
 });
