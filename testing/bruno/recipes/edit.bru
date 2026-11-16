@@ -34,6 +34,21 @@ body:json {
           "name": "Cannelle moulue",
           "quantity": 25,
           "unit": "g"
+        },
+        {
+          "name": "Cuisses de canard confites",
+          "quantity": 1,
+          "unit": ""
+        },
+        {
+          "name": "Bouquet garni",
+          "quantity": 1,
+          "unit": ""
+        },
+        {
+          "name": "Graisse de canard",
+          "quantity": 1,
+          "unit": ""
         }
       ],
       "utensils": [
@@ -53,4 +68,7 @@ tests {
   test("Updated difficulty", () => expect(res.getBody().difficulty).to.equal("Difficile"));
   test("Edited title", () => expect(res.getBody().title).to.equal("Recette modifiée"));
   test("Ingredient icon", () => expect(res.getBody().quantities.find(item => item.name === "Cannelle moulue").icon).to.equal("spice"));
+  test("Cuisses de canard confites icon", () => expect(res.getBody().quantities.find(item => item.name === "Cuisses de canard confites").icon).to.equal("meat"));
+  test("Bouquet garni icon", () => expect(res.getBody().quantities.find(item => item.name === "Bouquet garni").icon).to.equal("spice"));
+  test("Graisse de canard icon", () => expect(res.getBody().quantities.find(item => item.name === "Graisse de canard").icon).to.equal("other"));
 }

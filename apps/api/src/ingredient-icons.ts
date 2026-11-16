@@ -5,6 +5,9 @@ export function ingredientNameKey(name: string) {
     .replaceAll('œ', 'oe').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
+// Classify preparations before looking at the ingredient used to make them.
+const genericPreparations = new Set(['bouillon', 'fond', 'fumet', 'graisse', 'huile']);
+
 const expressions = new Map<string, IngredientIcon>([
   ['pomme de terre', 'vegetable'], ['pommes de terre', 'vegetable'],
   ['pate feuilletee', 'grain'], ['pate brisee', 'grain'], ['pate sablee', 'grain'],
@@ -13,6 +16,7 @@ const expressions = new Map<string, IngredientIcon>([
   ['lait de soja', 'other'], ['lait d avoine', 'other'],
   ['beurre de cacahuete', 'other'], ['beurre de cacahuetes', 'other'],
   ['petit pois', 'vegetable'], ['petits pois', 'vegetable'],
+  ['bouquet garni', 'spice'], ['bouquets garnis', 'spice'],
   ['sucre vanille', 'grain'], ['sauce soja', 'other'],
 ]);
 
@@ -21,8 +25,8 @@ const keywords: Record<Exclude<IngredientIcon, 'other'>, readonly string[]> = {
     'citron', 'concombre', 'courgette', 'echalote', 'epinard', 'fraise', 'framboise', 'haricot', 'lentille',
     'myrtille', 'navet', 'oignon', 'olive', 'orange', 'patate', 'peche', 'poire', 'poireau',
     'poireaux', 'poivron', 'pomme', 'potiron', 'salade', 'tomate'],
-  meat: ['agneau', 'boeuf', 'crevette', 'dinde', 'jambon', 'lardon', 'lieu', 'merlu', 'poulet', 'porc',
-    'sardine', 'saucisse', 'saumon', 'thon', 'veau', 'viande'],
+  meat: ['agneau', 'boeuf', 'canard', 'crevette', 'dinde', 'jambon', 'lardon', 'lieu', 'merlu', 'poulet', 'porc',
+    'sardine', 'saucisse', 'saumon', 'thon', 'veau', 'viande', 'volaille'],
   dairy: ['bechamel', 'beurre', 'creme', 'emmental', 'fromage', 'lait', 'mascarpone', 'mozzarella',
     'oeuf', 'parmesan', 'ricotta', 'yaourt'],
   grain: ['avoine', 'ble', 'boulgour', 'cassonade', 'chapelure', 'farine', 'fecule', 'lasagne', 'mais', 'nouille',
@@ -37,11 +41,15 @@ for (const [icon, words] of Object.entries(keywords) as [Exclude<IngredientIcon,
 }
 
 export function inferIngredientIcon(name: string): IngredientIcon {
-  const normalized = ' ' + ingredientNameKey(name) + ' ';
+  const words = ingredientNameKey(name).split(' ');
+  const [firstWord] = words;
+  if (genericPreparations.has(firstWord) || genericPreparations.has(firstWord.replace(/s$/, ''))) return 'other';
+
+  const normalized = ' ' + words.join(' ') + ' ';
   for (const [expression, icon] of expressions) {
     if (normalized.includes(' ' + expression + ' ')) return icon;
   }
-  for (const word of normalized.trim().split(' ')) {
+  for (const word of words) {
     const icon = iconsByWord.get(word) ?? (word.endsWith('s') ? iconsByWord.get(word.slice(0, -1)) : undefined);
     if (icon) return icon;
   }

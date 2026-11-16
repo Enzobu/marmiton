@@ -29,3 +29,22 @@ test('Compound ingredients take precedence over individual words', () => {
     ['Sucre vanillé', 'grain'],
   ]) assert.equal(inferIngredientIcon(name), icon, name);
 });
+
+test('Cassoulet ingredients distinguish meats, aromatics and cooking preparations', () => {
+  for (const [name, icon] of [
+    ['Haricots blancs secs', 'vegetable'],
+    ['Cuisses de canard confites', 'meat'],
+    ['Saucisses de Toulouse', 'meat'],
+    ['Poitrine de porc', 'meat'],
+    ['Oignon', 'vegetable'],
+    ['Carotte', 'vegetable'],
+    ['Gousses d’ail', 'vegetable'],
+    ['Bouquet garni', 'spice'],
+    ['Bouillon de volaille peu salé', 'other'],
+    ['Graisse de canard', 'other'],
+    ['Poivre noir', 'spice'],
+    ['Bouquets garnis', 'spice'],
+    ['Fond de veau', 'other'],
+    ['Huile d’olive', 'other'],
+  ]) assert.equal(inferIngredientIcon(name), icon, name);
+});
