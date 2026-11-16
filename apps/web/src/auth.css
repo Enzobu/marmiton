@@ -66,7 +66,8 @@
 .profile-dropdown button:hover{background:var(--color-soft)}
 .profile-demo-tag{font-size:10px;color:var(--color-muted);padding:9px 12px;display:block}
 @media(max-width:950px){.auth-layout{grid-template-columns:minmax(0,1fr) .7fr}.auth-card{padding:32px}.auth-story-content{padding:0 28px 32px}.auth-story h2{font-size:29px}.auth-story-badge{left:28px}}
-@media(max-width:760px){.auth-page{padding:24px 16px 54px}.auth-layout{display:block;max-width:520px;min-height:0}.auth-card{padding:28px 24px 35px}.auth-story{display:none}.profile-trigger>span:last-child{display:none}.profile-trigger{padding:5px}.profile-dropdown{right:0}}
+@media(max-width:760px){.auth-page{padding:24px 16px 54px}.auth-layout{display:block;max-width:520px;min-height:0}.auth-card{padding:28px 24px 35px}.auth-story{display:none}}
+@media(max-width:940px){.profile-trigger>span:last-child{display:none}.profile-trigger{padding:5px}.profile-menu-wrap{position:static}.profile-dropdown{top:100%;right:20px;max-width:calc(100% - 40px)}}
 @media(max-width:420px){.auth-card{padding:26px 18px}.auth-name-grid{grid-template-columns:1fr}.auth-password-rules{grid-template-columns:1fr}.auth-card h1{font-size:29px}.profile-avatar{width:31px;height:31px}}
 @media(prefers-reduced-motion:reduce){.auth-input-wrap{transition:none}}
 
