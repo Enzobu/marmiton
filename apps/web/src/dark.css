@@ -133,3 +133,5 @@ html[data-theme="dark"] :is(.account-form-grid input,.account-form-grid textarea
 html[data-theme="dark"] :is(.form-field input,.form-field textarea){background:var(--color-field)}
 html[data-theme="dark"] :is(.account-form-grid input,.account-form-grid textarea,.account-search input,.form-field input,.form-field textarea,.auth-input-wrap input,.recipe-json-panel textarea)::placeholder{color:var(--color-muted);opacity:1}
 html[data-theme="dark"] .site-header{background:var(--color-paper)}
+
+html[data-theme="dark"] .detail-outline-button.shopping-clear{color:#ffb6a9}

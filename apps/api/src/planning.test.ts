@@ -31,12 +31,22 @@ test('Planning survives a new session, and concurrent additions combine quantiti
     ] });
     let headers = await login();
     const list = async () => (await app.inject({ url: shopping, headers })).json() as
-      { id: string; name: string; amount: number; checked: boolean }[];
+      { id: string; name: string; amount: number; checked: boolean;
+        contributions: { recipeId: string | null; recipeTitle: string | null; amount: number | null }[] }[];
     const add = (id: string) => app.inject({ method: 'POST', url: shopping, headers, payload: { meals: [{ recipeId: id, servings: 2 }] } });
+    const oldFlour = await db.shoppingItem.create({ data: { ownerId, name: 'Farine', unit: 'g', amount: 30 } });
+    assert.deepEqual((await list())[0].contributions, [{ recipeId: null, recipeTitle: null, amount: 30 }]);
     assert.deepEqual((await Promise.all([add(recipeId), add(recipeId)])).map(result => result.statusCode), [204, 204]);
+    const cakeId = '00000000-0000-4000-8000-000000000002';
+    assert.equal((await add(cakeId)).statusCode, 204);
     const items = await list();
     const flour = items.find(item => item.name === 'Farine')!;
-    assert.equal(flour.amount, 250);
+    assert.equal(flour.id, oldFlour.id);
+    assert.equal(flour.amount, 305);
+    assert.deepEqual(new Map(flour.contributions.map(entry => [entry.recipeId, entry.amount])), new Map([
+      [null, 30], [recipeId, 250], [cakeId, 25],
+    ]));
+    assert.ok(flour.contributions.every(entry => !entry.recipeId || entry.recipeTitle));
     assert.equal((await app.inject({ method: 'PATCH', url: shopping + '/' + flour.id, headers, payload: { checked: true } })).statusCode, 204);
     const planned = await app.inject({ method: 'POST', url: menu, headers, payload: { recipeId, servings: 6, date } });
     assert.equal(planned.statusCode, 201);
@@ -54,6 +64,16 @@ test('Planning survives a new session, and concurrent additions combine quantiti
     assert.deepEqual((await app.inject({ url: menu + '?from=2029-12-31', headers })).json(), []);
     assert.deepEqual((await app.inject({ url: notes, headers })).json(), { note: '' });
     assert.equal((await app.inject({ method: 'PATCH', url: shopping + '/' + flour.id, headers, payload: { checked: false } })).statusCode, 404);
+    assert.equal((await app.inject({ method: 'DELETE', url: shopping })).statusCode, 401);
+    assert.equal((await add(recipeId)).statusCode, 204);
+    const otherItems = await list();
+    headers = await login();
+    assert.equal((await app.inject({ method: 'DELETE', url: shopping, headers })).statusCode, 204);
+    assert.deepEqual(await list(), []);
+    assert.equal(await db.shoppingContribution.count({ where: { itemId: flour.id } }), 0);
+    assert.equal((await app.inject({ method: 'DELETE', url: shopping, headers })).statusCode, 204);
+    headers = await login(otherEmail);
+    assert.deepEqual(await list(), otherItems);
   } finally {
     await db.owner.deleteMany({ where: { id: { in: [ownerId, otherOwnerId] }, email: { in: [email, otherEmail] } } });
     await db.$disconnect();
