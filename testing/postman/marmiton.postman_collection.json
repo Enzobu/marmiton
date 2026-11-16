@@ -75,7 +75,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Recipe has quantities and steps', () => { pm.expect(pm.response.json().quantities).to.have.lengthOf(5); pm.expect(pm.response.json().steps).to.have.lengthOf(3); });"
+                  "pm.test('Recipe has quantities and steps', () => { pm.expect(pm.response.json().quantities).to.have.lengthOf(5); pm.expect(pm.response.json().steps).to.have.lengthOf(3); });",
+                  "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Feuilles de lasagne\").icon).to.equal(\"grain\"));"
                 ]
               }
             }
@@ -656,7 +657,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
-                  "pm.test(\"Created UUID\", () => { const id = pm.response.json().id; pm.expect(id).to.match(/^[a-f0-9-]{36}$/); pm.environment.set(\"recipeId\", id); });"
+                  "pm.test(\"Created UUID\", () => { const id = pm.response.json().id; pm.expect(id).to.match(/^[a-f0-9-]{36}$/); pm.environment.set(\"recipeId\", id); });",
+                  "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Farine\").icon).to.equal(\"grain\"));"
                 ]
               }
             }
@@ -704,7 +706,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette modifi\\u00e9e\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Difficile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+              "raw": "{\n  \"recipe\": {\n    \"schemaVersion\": 1,\n    \"title\": \"Recette modifi\\u00e9e\",\n    \"description\": \"Fixture HTTP\",\n    \"category\": \"Plats\",\n    \"difficulty\": \"Difficile\",\n    \"servings\": 2,\n    \"times\": {\n      \"preparation\": 5,\n      \"cooking\": 10,\n      \"rest\": 0\n    },\n    \"budget\": \"Bon march\\u00e9\",\n    \"ingredients\": [\n      {\n        \"name\": \"Cannelle moulue\",\n        \"quantity\": 25,\n        \"unit\": \"g\"\n      },\n      {\n        \"name\": \"Cuisses de canard confites\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Bouquet garni\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Graisse de canard\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Champigon\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      }\n    ],\n    \"utensils\": [\n      \"Bol\"\n    ],\n    \"steps\": [\n      \"M\\u00e9langer.\"\n    ],\n    \"imageUrl\": null\n  },\n  \"isPublic\": true\n}"
             }
           },
           "event": [
@@ -715,7 +717,12 @@
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
                   "pm.test(\"Edited title\", () => pm.expect(pm.response.json().title).to.eql(\"Recette modifiée\"));",
-                  "pm.test(\"Updated difficulty\", () => pm.expect(pm.response.json().difficulty).to.eql(\"Difficile\"));"
+                  "pm.test(\"Updated difficulty\", () => pm.expect(pm.response.json().difficulty).to.eql(\"Difficile\"));",
+                  "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Cannelle moulue\").icon).to.equal(\"spice\"));",
+                  "pm.test(\"Cuisses de canard confites icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Cuisses de canard confites\").icon).to.equal(\"meat\"));",
+                  "pm.test(\"Bouquet garni icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Bouquet garni\").icon).to.equal(\"spice\"));",
+                  "pm.test(\"Graisse de canard icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Graisse de canard\").icon).to.equal(\"other\"));",
+                  "pm.test(\"Icon for a misspelled ingredient\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Champigon\").icon).to.equal(\"vegetable\"));"
                 ]
               }
             }

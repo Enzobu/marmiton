@@ -51,4 +51,5 @@ body:json {
 tests {
   test("HTTP 201", () => expect(res.getStatus()).to.equal(201));
   test("Created UUID", () => { const id = res.getBody().id; expect(id).to.match(/^[a-f0-9-]{36}$/); bru.setVar("recipeId", id); });
+  test("Ingredient icon", () => expect(res.getBody().quantities.find(item => item.name === "Farine").icon).to.equal("grain"));
 }

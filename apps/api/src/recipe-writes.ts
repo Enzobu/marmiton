@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireSession } from './auth.js';
 import { recipeResponse, recipeRelations } from './catalog.js';
 import { imageStore, imageNamePattern, parseImage } from './images.js';
+import { inferIngredientIcon, ingredientNameKey } from './ingredient-icons.js';
 import { validateRecipeJson, type RecipeJson } from './recipe-json.js';
 
 const payload = z.object({
@@ -23,9 +24,13 @@ function recipeData(doc: RecipeJson, isPublic: boolean, imagePath: string | null
   };
 }
 
-function childData(doc: RecipeJson) {
+function childData(doc: RecipeJson, previousIngredients: { name: string; icon: string }[] = []) {
+  const previousIcons = new Map(previousIngredients.filter(item => item.icon !== 'other').map(item => [ingredientNameKey(item.name), item.icon]));
   return {
-    ingredients: doc.ingredients.map((item, position) => ({ name: item.name.trim(), quantity: item.quantity, unit: item.unit.trim(), icon: 'other', position })),
+    ingredients: doc.ingredients.map((item, position) => ({
+      name: item.name.trim(), quantity: item.quantity, unit: item.unit.trim(), position,
+      icon: previousIcons.get(ingredientNameKey(item.name)) ?? inferIngredientIcon(item.name),
+    })),
     steps: doc.steps.map((content, position) => ({ content: content.trim(), position })),
   };
 }
@@ -64,12 +69,13 @@ export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, ima
         const image = photo ? parseImage(photo) : null;
         if (photo && !image) return reply.code(400).send({ error: 'Invalid image' });
         const imagePath = image ? await images.put(image) : checked.value.imageUrl;
-        const children = childData(checked.value);
+        const doc = checked.value;
         try {
           if (!id) {
+            const children = childData(doc);
             const recipe = await db.recipe.create({
               data: {
-                ...recipeData(checked.value, isPublic, imagePath),
+                ...recipeData(doc, isPublic, imagePath),
                 ingredients: { create: children.ingredients }, steps: { create: children.steps },
               },
               include: recipeRelations,
@@ -81,12 +87,16 @@ export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, ima
             const [previous] = await tx.$queryRaw<{ imagePath: string | null }[]>`SELECT imagePath FROM Recipe WHERE id = ${id} FOR UPDATE`;
             if (!previous) return null;
             const nextImage = keepPhoto && !image ? previous.imagePath : imagePath;
+            const previousIngredients = await tx.recipeIngredient.findMany({
+              where: { recipeId: id }, select: { name: true, icon: true }, orderBy: { position: 'asc' },
+            });
+            const children = childData(doc, previousIngredients);
             await tx.recipeIngredient.deleteMany({ where: { recipeId: id } });
             await tx.recipeStep.deleteMany({ where: { recipeId: id } });
             const recipe = await tx.recipe.update({
               where: { id },
               data: {
-                ...recipeData(checked.value, isPublic, nextImage),
+                ...recipeData(doc, isPublic, nextImage),
                 ingredients: { create: children.ingredients }, steps: { create: children.steps },
               },
               include: recipeRelations,

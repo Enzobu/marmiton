@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireSession } from './auth.js';
+import { inferIngredientIcon } from './ingredient-icons.js';
 import { RECIPE_DIFFICULTIES } from './recipe-json.js';
 
 const querySchema = z.object({
@@ -37,7 +38,8 @@ export function recipeResponse(recipe: Prisma.RecipeGetPayload<{ include: typeof
     ingredients: recipe.ingredients.map(item => item.name),
     steps: recipe.steps.map(step => step.content),
     quantities: recipe.ingredients.map(item => ({
-      name: item.name, amount: item.quantity?.toNumber() ?? null, unit: item.unit, icon: item.icon,
+      name: item.name, amount: item.quantity?.toNumber() ?? null, unit: item.unit,
+      icon: item.icon === 'other' ? inferIngredientIcon(item.name) : item.icon,
     })),
     preparation: {
       prep: recipe.prepMinutes, cook: recipe.cookMinutes, rest: recipe.restMinutes,

@@ -3,6 +3,7 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { PrismaClient } from '@prisma/client';
 import { buildApp } from './app.js';
 import { parseImage } from './images.js';
 import { RECIPE_JSON_EXAMPLE } from './recipe-json.js';
@@ -20,6 +21,7 @@ test('Image validation rejects data with the wrong format', () => {
 test('Owner CRUD persists related rows and removes replaced images', { skip: !process.env.DATABASE_URL }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'marmiton-uploads-'));
   const app = buildApp({ uploadDirectory: dir });
+  const db = new PrismaClient();
   let id = '';
   let headers: { authorization: string } | undefined;
   try {
@@ -34,8 +36,18 @@ test('Owner CRUD persists related rows and removes replaced images', { skip: !pr
     assert.equal(created.statusCode, 201);
     id = created.json().id;
     const image = created.json().image;
+    const readIcons = async () => (await db.recipeIngredient.findMany({
+      where: { recipeId: id }, orderBy: { position: 'asc' }, select: { icon: true },
+    })).map(item => item.icon);
+    assert.deepEqual(await readIcons(), ['meat', 'vegetable']);
+    await db.recipeIngredient.updateMany({ where: { recipeId: id, position: 0 }, data: { icon: 'other' } });
+    await db.recipeIngredient.updateMany({ where: { recipeId: id, position: 1 }, data: { icon: 'spice' } });
     const path = `/recipes/${id}`;
     assert.equal((await app.inject(path)).statusCode, 404);
+    const detail = await app.inject({ url: path, headers });
+    assert.equal(detail.statusCode, 200);
+    assert.deepEqual(detail.json().quantities.map((item: { icon: string }) => item.icon), ['meat', 'spice']);
+    assert.deepEqual(await readIcons(), ['other', 'spice']);
     assert.equal((await app.inject(image)).statusCode, 404);
     assert.equal((await app.inject({ url: image, headers })).headers['content-type'], 'image/png');
     const update = await app.inject({ method: 'PUT', url: path, headers, payload: {
@@ -44,6 +56,7 @@ test('Owner CRUD persists related rows and removes replaced images', { skip: !pr
     assert.equal(update.statusCode, 200);
     assert.deepEqual(update.json().steps, ['Étape mise à jour']);
     assert.equal(update.json().difficulty, 'Difficile');
+    assert.deepEqual(await readIcons(), ['meat', 'spice']);
     const catalog = await app.inject('/recipes?difficulty=Difficile');
     assert.equal(catalog.statusCode, 200);
     assert.ok(catalog.json().items.some((recipe: { id: string }) => recipe.id === id));
@@ -53,6 +66,7 @@ test('Owner CRUD persists related rows and removes replaced images', { skip: !pr
     assert.equal((await app.inject(path)).statusCode, 404);
   } finally {
     if (id && headers) await app.inject({ method: 'DELETE', url: `/recipes/${id}`, headers });
+    await db.$disconnect();
     await app.close();
     await rm(dir, { recursive: true });
   }

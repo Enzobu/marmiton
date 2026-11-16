@@ -13,4 +13,5 @@ get {
 tests {
   test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
   test("Recipe has quantities and steps", () => { expect(res.getBody().quantities).to.have.lengthOf(5); expect(res.getBody().steps).to.have.lengthOf(3); });
+  test("Ingredient icon", () => expect(res.getBody().quantities.find(item => item.name === "Feuilles de lasagne").icon).to.equal("grain"));
 }

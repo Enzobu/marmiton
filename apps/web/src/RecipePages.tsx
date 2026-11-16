@@ -1,3 +1,4 @@
+import { IngredientPicture } from './IngredientPicture';
 import { RecipeNotes } from './RecipeNotes';
 import { MealDateForm } from './WeeklyMenu';
 import { CookingMode } from './CookingMode';
@@ -35,19 +36,6 @@ function Glyph({ name, size = 20 }: { name: 'back' | 'clock' | 'star' | 'heart' 
     trash: <><path d="M4 7h16M9 4h6M7 7l1 14h8l1-14M10 11v7m4-7v7"/></>
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name]}</svg>;
-}
-
-function IngredientPicture({ icon }: { icon: Ingredient['icon'] }) {
-  return <span className={`ingredient-picture ingredient-${icon}`} aria-hidden="true">
-    <svg width="31" height="31" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round">
-      {icon === 'vegetable' && <><path d="M16 9c-9-4-13 1-12 8 1 7 9 10 12 10s11-3 12-10c1-7-3-12-12-8Z"/><path d="M16 10c-3-6-1-8 2-8M16 12l-6-6m6 6 7-6"/></>}
-      {icon === 'meat' && <><path d="M8 24c-4-4-2-10 3-15s12-5 15-1c4 4 1 11-4 15s-10 5-14 1Z"/><circle cx="18" cy="14" r="4"/></>}
-      {icon === 'dairy' && <><path d="M10 7h12l2 20H8l2-20ZM11 7V3h10v4M9 14h14M13 20h6"/></>}
-      {icon === 'grain' && <><path d="M16 28V4M16 9c-4 0-7-2-7-6m7 12c-5 0-9-3-9-7m9 13c-5 0-9-3-9-7m9-5c4 0 7-2 7-6m-7 12c5 0 9-3 9-7m-9 13c5 0 9-3 9-7"/></>}
-      {icon === 'spice' && <><path d="M11 5h10M12 5v6l-6 8a5 5 0 0 0 9 5l7-10c2-3 0-7-4-7M8 22c3 1 5 0 7-2"/></>}
-      {icon === 'other' && <><path d="M13 3h6v5l4 6v11c0 2-1 3-3 3H12c-2 0-3-1-3-3V14l4-6V3ZM9 17h14"/></>}
-    </svg>
-  </span>;
 }
 
 export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping, onPlanMeal, showNotes }: { recipe: Recipe; showNotes: boolean; addToShopping: (servings: number) => Promise<boolean>; onPlanMeal: (servings: number, date: string) => Promise<boolean> } & SharedProps) {
@@ -103,7 +91,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
         <aside className="ingredients-panel"><div className="panel-heading"><div><span className="section-kicker">Avant de commencer</span><h2>Ingrédients</h2></div><span className="panel-count">{ingredients.length} ingrédients</span></div>
           <div className="servings-control"><div><Glyph name="people" size={20}/><span>Nombre de portions</span></div><div className="servings-stepper"><button type="button" onClick={() => setServings(current => Math.max(1, current - 1))} disabled={servings <= 1} aria-label="Diminuer le nombre de personnes"><Glyph name="minus" size={17}/></button><output aria-live="polite">{servings}</output><button type="button" onClick={() => setServings(current => Math.min(12, current + 1))} disabled={servings >= 12} aria-label="Augmenter le nombre de personnes"><Glyph name="plus" size={17}/></button></div></div>
           <p className="panel-hint">Les quantités s’adaptent automatiquement au nombre de personnes.</p>
-          <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, ingredientBaseServings(recipe))}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
+          <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture ingredient={ingredient}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, ingredientBaseServings(recipe))}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
           {ingredients.length > 0 && <div className="planning-actions">
             <button type="button" className={`detail-outline-button shopping-add ${shoppingStatus === 'added' ? 'is-added' : ''}`}
               disabled={shoppingStatus !== 'idle'} onClick={() => void addIngredients()}>
