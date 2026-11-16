@@ -34,8 +34,8 @@ const links: { page: AccountRoute; label: string; href: string }[] = [
   { page: 'favorites', label: 'Mes favoris', href: '/favorites' }
 ];
 
-function NavLink({ to, navigate, children }: { to: string; navigate: Props['navigate']; children: ReactNode }) {
-  return <a href={to} onClick={event => {
+function NavLink({ to, navigate, children, className }: { to: string; navigate: Props['navigate']; children: ReactNode; className?: string }) {
+  return <a href={to} className={className} onClick={event => {
     if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
       event.preventDefault(); navigate(to);
     }
@@ -138,7 +138,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
             <div className="account-controls"><label className="account-search"><span className="sr-only">Rechercher dans mes recettes</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher une recette..."/></label><SelectField className="account-sort" label="Trier par" value={sort} onChange={value => setSort(value as typeof sort)} options={[{ value: "recent", label: "Plus récentes" }, { value: "name", label: "Nom A-Z" }, { value: "time", label: "Plus rapides" }]}/></div>
             {page === 'favorites' && favoritesError ? <p role="alert">Impossible de charger les favoris.</p>
               : page === 'favorites' && favoritesPending ? <p role="status">Chargement des favoris…</p>
-              : filtered.length ? <div className="account-recipe-grid">{filtered.map(recipe => <article className="account-recipe-card" key={recipe.id}><NavLink to={recipePath(recipe.id)} navigate={navigate}><AccountRecipeImage recipe={recipe} token={token}/></NavLink><div className="account-recipe-body"><span className="card-category">{recipe.category}</span><h3><NavLink to={recipePath(recipe.id)} navigate={navigate}>{recipe.title}</NavLink></h3><p>{formatTime(recipe.time)} · {recipe.difficulty}</p><div className="account-recipe-actions">{page === 'favorites' ? <button onClick={() => onFavoriteToggle(recipe.id)}>Retirer des favoris</button> : <><button onClick={() => navigate(`/recipes/${recipe.id}/edit`)}>Modifier</button><button className="account-danger" onClick={() => setPendingDelete(recipe)}>Supprimer</button></>}</div></div></article>)}</div> : source.length === 0 ? <EmptyContent kind={page} navigate={navigate}/> : <div className="account-no-results"><h3>Aucune recette ne correspond</h3><p>Essayez d’autres mots-clés.</p><button onClick={() => setQuery('')}>Effacer la recherche</button></div>}
+              : filtered.length ? <div className="account-recipe-grid">{filtered.map(recipe => <article className="account-recipe-card" key={recipe.id}><div className="account-recipe-photo" aria-hidden="true"><AccountRecipeImage recipe={recipe} token={token}/></div><div className="account-recipe-body"><span className="card-category">{recipe.category}</span><h3><NavLink className="recipe-card-link" to={recipePath(recipe.id)} navigate={navigate}>{recipe.title}</NavLink></h3><p>{formatTime(recipe.time)} · {recipe.difficulty}</p><div className="account-recipe-actions">{page === 'favorites' ? <button onClick={() => onFavoriteToggle(recipe.id)}>Retirer des favoris</button> : <><button onClick={() => navigate(`/recipes/${recipe.id}/edit`)}>Modifier</button><button className="account-danger" onClick={() => setPendingDelete(recipe)}>Supprimer</button></>}</div></div></article>)}</div> : source.length === 0 ? <EmptyContent kind={page} navigate={navigate}/> : <div className="account-no-results"><h3>Aucune recette ne correspond</h3><p>Essayez d’autres mots-clés.</p><button onClick={() => setQuery('')}>Effacer la recherche</button></div>}
           </>}
         </section>
       </div>

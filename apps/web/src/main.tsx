@@ -40,17 +40,22 @@ function Icon({ name, size = 20 }: { name: 'search' | 'heart' | 'clock' | 'star'
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-function RecipeCard({ recipe, saved, onToggle, onOpen }: { recipe: Recipe; saved: boolean; onToggle: (id: Recipe['id']) => void; onOpen: (recipe: Recipe) => void }) {
+function RecipeCard({ recipe, saved, onToggle, navigate }: { recipe: Recipe; saved: boolean; onToggle: (id: Recipe['id']) => void; navigate: (path: string) => void }) {
   const [imageReady, setImageReady] = useState(false);
   return <article className="recipe-card">
-    <a className={`recipe-image-button ${imageReady || !recipe.image ? "image-ready" : ""}`} aria-busy={Boolean(recipe.image) && !imageReady} href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }} aria-label={`Voir la recette ${recipe.title}`}>
-      {recipe.image && <img src={recipe.image} alt={recipe.title} loading="lazy" onLoad={() => setImageReady(true)} onError={() => setImageReady(true)}/>}
+    <div className={`recipe-image-button ${imageReady || !recipe.image ? "image-ready" : ""}`}>
+      {recipe.image && <img src={recipe.image} alt="" loading="lazy" onLoad={() => setImageReady(true)} onError={() => setImageReady(true)}/>}
       {recipe.badge && <span className="recipe-badge">{recipe.badge}</span>}
-    </a>
+    </div>
     <button className={`favorite ${saved ? 'active' : ''}`} onClick={() => onToggle(recipe.id)} aria-label={saved ? `Retirer ${recipe.title} des favoris` : `Ajouter ${recipe.title} aux favoris`} aria-pressed={saved}><Icon name="heart" size={20}/></button>
     <div className="card-content">
       <span className="card-category">{recipe.category}</span>
-      <a className="card-title-button" href={recipePath(recipe.id)} onClick={event => { event.preventDefault(); onOpen(recipe); }}><h3>{recipe.title}</h3></a>
+      <a className="card-title-button recipe-card-link" href={recipePath(recipe.id)} onClick={event => {
+        if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          navigate(recipePath(recipe.id));
+        }
+      }}><h3>{recipe.title}</h3></a>
       <div className="card-meta"><span className="rating"><Icon name="star" size={15}/>{recipe.rating.toFixed(1)} <span className="reviews">({recipe.reviews})</span></span><span><Icon name="clock" size={15}/>{formatTime(recipe.time)}</span></div>
     </div>
   </article>;
@@ -210,15 +215,17 @@ function App() {
     return accessToken;
   }
 
-  async function saveShopping(meals: { recipeId: Recipe['id']; servings: number }[], success: string) {
+  async function saveShopping(meals: { recipeId: Recipe['id']; servings: number }[], success?: string) {
     const token = planningSession();
-    if (!token) return;
+    if (!token) return false;
     try {
       await planningRequest('/me/shopping-list', token, { method: 'POST', body: JSON.stringify({ meals }) });
-      notify(success);
+      if (success) notify(success);
+      return true;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) invalidateSession();
       notify('Impossible d’ajouter les ingrédients à la liste de courses.', 'error');
+      return false;
     }
   }
 
@@ -238,8 +245,8 @@ function App() {
     }
   }
 
-  function addWeeklyMenuToShopping(meals: PlannedMeal[]) {
-    return saveShopping(meals.map(({ recipeId, servings }) => ({ recipeId, servings })), 'Menu ajouté à la liste de courses.');
+  async function addWeeklyMenuToShopping(meals: PlannedMeal[]) {
+    await saveShopping(meals.map(({ recipeId, servings }) => ({ recipeId, servings })), 'Menu ajouté à la liste de courses.');
   }
   const isHome = path === '/';
   const activeNav = path === '/' ? 'home'
@@ -409,7 +416,6 @@ function App() {
     setOnlyFavorites(false);
     navigate('/');
   };
-  const openRecipe = (recipe: Recipe) => navigate(recipePath(recipe.id));
 
   return <>
     <div className="top-announcement"><span>Les bonnes recettes se partagent, tout simplement</span></div>
@@ -449,7 +455,12 @@ function App() {
         </div>
       </section>
       <section className="categories-section section-container" aria-labelledby="categories-title"><div className="section-heading"><div><span className="section-kicker">Catalogue</span><h2 id="categories-title">Explorer par catégorie</h2></div><p>Entrées, plats, desserts et petits-déjeuners.</p></div><div className="category-grid">{categories.slice(1).map(item => <button key={item} className={`category-tile ${category === item && !onlyFavorites ? 'selected' : ''}`} onClick={() => chooseCategory(item)}><span className="category-emoji" aria-hidden="true">{categoryInitials[item]}</span><span>{item}</span><Icon name="arrow" size={17}/></button>)}</div></section></>}
-      {isCatalog && <section className="catalog-intro"><span className="section-kicker">Catalogue</span><h1>Toutes les recettes</h1><p>Filtrez les recettes par catégorie, difficulté, durée ou budget.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Rechercher une recette</label><input id="catalog-search" placeholder="Nom de recette ou ingrédient" value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form><a className="planning-link" href="/pantry-search" onClick={event => { event.preventDefault(); navigate('/pantry-search'); }}>Rechercher avec mes ingrédients</a></section>}
+      {isCatalog && <section className="catalog-intro"><span className="section-kicker">Catalogue</span><h1>Toutes les recettes</h1><p>Filtrez les recettes par catégorie, difficulté, durée ou budget.</p><form className="hero-search catalog-search" onSubmit={event => event.preventDefault()}><Icon name="search" size={21}/><label className="sr-only" htmlFor="catalog-search">Rechercher une recette</label><input id="catalog-search" placeholder="Nom de recette ou ingrédient" value={search} onChange={event => setSearch(event.target.value)}/><button type="submit">Rechercher <Icon name="arrow" size={17}/></button></form><a className="detail-outline-button planning-button catalog-pantry-button" href="/pantry-search" onClick={event => {
+              if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+                event.preventDefault();
+                navigate('/pantry-search');
+              }
+            }}><Icon name="sliders" size={17}/>Rechercher avec mes ingrédients<Icon name="arrow" size={16}/></a></section>}
       {(isHome || isCatalog) && <section id="recipes" className={isCatalog ? "recipes-section section-container catalog-recipes" : "recipes-section section-container"} aria-labelledby="recipes-title"><div className="section-heading recipes-heading"><div><span className="section-kicker">{onlyFavorites ? 'Ma sélection' : 'Catalogue'}</span><h2 id="recipes-title">{onlyFavorites ? 'Mes recettes favorites' : search ? 'Résultats de recherche' : category === 'Toutes les recettes' ? 'Recettes à découvrir' : category}</h2></div><span className="recipe-count">{total} recette{total > 1 ? 's' : ''}</span></div>
         <div className="filter-bar"><div className="filter-chips" role="group" aria-label="Filtrer les recettes"><button className={category === 'Toutes les recettes' && !onlyFavorites ? 'active' : ''} onClick={() => { setOnlyFavorites(false); setCategory('Toutes les recettes'); }}>Tout voir</button>{categories.slice(1).map(item => <button key={item} className={!onlyFavorites && category === item ? 'active' : ''} onClick={() => { setCategory(item); setOnlyFavorites(false); }}>{item}</button>)}<button className={onlyFavorites ? 'active' : ''} onClick={openFavorites}><Icon name="heart" size={14}/>Favoris</button></div><span className="filter-caption"><Icon name="sliders" size={17}/> Catégories de recettes</span></div>
         {isCatalog && <div className="advanced-search-panel" role="group" aria-label="Filtres avancés">
@@ -459,7 +470,7 @@ function App() {
           <SelectField className="catalog-select" label="Trier par" value={sortFilter} onChange={value => setSortFilter(value as CatalogSort)} options={[{ value: "relevance", label: "Par défaut" }, { value: "popular", label: "Plus populaires" }, { value: "rating", label: "Mieux notées" }, { value: "prep", label: "Préparation rapide" }, { value: "time", label: "Durée totale" }]}/>
           {hasCatalogFilters && <button type="button" className="advanced-reset" onClick={resetAdvancedFilters}>Effacer les filtres</button>}
         </div>}
-        {!currentCatalog ? <p role="status">Chargement des recettes…</p> : currentCatalog.error ? <p role="alert">Impossible de charger les recettes.</p> : visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} onOpen={openRecipe}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essayez une autre recherche ou modifiez les filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
+        {!currentCatalog ? <p role="status">Chargement des recettes…</p> : currentCatalog.error ? <p role="alert">Impossible de charger les recettes.</p> : visible.length ? <div className="recipe-grid">{visible.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} saved={favorites.includes(recipe.id)} onToggle={toggleFavorite} navigate={navigate}/>)}</div> : <div className="empty-state"><Icon name="search" size={30}/><h3>Aucune recette trouvée</h3><p>Essayez une autre recherche ou modifiez les filtres.</p><button onClick={resetAdvancedFilters}>Voir toutes les recettes</button></div>}
         {isHome && total > visible.length && <div className="see-more"><button onClick={() => navigate('/recipes')}>Découvrir toutes les recettes <Icon name="arrow" size={17}/></button></div>}
         {isCatalog && currentCatalog?.data && (catalogPage > 1 || total > catalogPage * currentCatalog.data.limit) && <div className="see-more">
           <button disabled={catalogPage === 1} onClick={() => setCatalogPage(page => page - 1)}>Précédent</button>
@@ -473,7 +484,7 @@ function App() {
     {isShoppingList && profile && accessToken && <ShoppingList key={accessToken} token={accessToken}/>}
     {isWeeklyMenu && profile && accessToken && <WeeklyMenu key={accessToken} token={accessToken} onAddToShopping={addWeeklyMenuToShopping}/>}
     {isPantrySearch && <PantrySearch/>}
-    {selectedRecipe && <RecipeDetail showNotes={Boolean(profile)} onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => saveShopping([{ recipeId: selectedRecipe.id, servings }], 'Ingrédients ajoutés à la liste de courses.')} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
+    {selectedRecipe && <RecipeDetail showNotes={Boolean(profile)} onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => saveShopping([{ recipeId: selectedRecipe.id, servings }])} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} signedIn={Boolean(profile)} sessionPending={sessionPending} onReset={() => { invalidateSession(); navigate('/login'); notify('Mot de passe réinitialisé.'); }} onLogin={({ profile: user, accessToken: token }, remember) => {

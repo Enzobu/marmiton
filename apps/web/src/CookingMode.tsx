@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { formatQuantity, ingredientBaseServings, ingredientsForRecipe, type Recipe } from './recipe-data';
 import './cooking-mode.css';
 
-export function CookingMode({ recipe, servings, onClose }: { recipe: Recipe; servings: number; onClose: () => void }) {
+export function CookingMode({ recipe, servings, step, onPrevious, onCompleteStep, onClose }: {
+  recipe: Recipe;
+  servings: number;
+  step: number;
+  onPrevious: () => void;
+  onCompleteStep: () => void;
+  onClose: () => void;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const [step, setStep] = useState(0);
   const [minutes, setMinutes] = useState('5');
   const [deadline, setDeadline] = useState<number | null>(null);
   const [seconds, setSeconds] = useState(0);
@@ -24,10 +30,9 @@ export function CookingMode({ recipe, servings, onClose }: { recipe: Recipe; ser
     return () => window.clearInterval(interval);
   }, [deadline, expired]);
 
-  function showStep(next: number) {
-    setStep(next);
+  useEffect(() => {
     heading.current?.focus();
-  }
+  }, [step]);
 
   return <dialog className="cooking-mode" ref={dialog} aria-labelledby="cooking-title" onCancel={event => {
     event.preventDefault();
@@ -41,8 +46,8 @@ export function CookingMode({ recipe, servings, onClose }: { recipe: Recipe; ser
     <h3 ref={heading} tabIndex={-1}>Étape {step + 1} sur {recipe.steps.length}</h3>
     <p className="cooking-instruction">{recipe.steps[step]}</p>
     <nav aria-label="Étapes de la recette">
-      <button type="button" className="detail-outline-button" disabled={step === 0} onClick={() => showStep(step - 1)}>Précédente</button>
-      <button type="button" className="account-primary" onClick={() => step + 1 === recipe.steps.length ? onClose() : showStep(step + 1)}>
+      <button type="button" className="detail-outline-button" disabled={step === 0} onClick={onPrevious}>Précédente</button>
+      <button type="button" className="account-primary" onClick={onCompleteStep}>
         {step + 1 === recipe.steps.length ? 'Terminer' : 'Suivante'}
       </button>
     </nav>

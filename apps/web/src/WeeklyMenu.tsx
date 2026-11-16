@@ -43,7 +43,7 @@ export function WeeklyMenu({ token, onAddToShopping }: { token: string; onAddToS
         setBusy(true);
         try { await onAddToShopping(currentMeals); } finally { setBusy(false); }
       }}>{busy ? 'Ajout en cours…' : 'Ajouter le menu à la liste de courses'}</button>
-      <a className="planning-link" href="/shopping-list">Voir la liste de courses</a>
+      <a className="detail-outline-button planning-button" href="/shopping-list">Voir la liste de courses</a>
     </div>
     {loadError && <p role="alert">Impossible de charger le menu. <button onClick={reload}>Réessayer</button></p>}
     {!currentMeals && !loadError && <p role="status">Chargement du menu…</p>}
