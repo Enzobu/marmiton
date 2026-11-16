@@ -1,0 +1,22 @@
+meta {
+  name: GET /me/shopping-list (shopping-list)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/me/shopping-list
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Scaled quantity", () => { const data = res.getBody(); const item = data.find(item => item.name === "Feuilles de lasagne"); expect(item.amount).to.equal(6); expect(item.checked).to.equal(false); bru.setVar("planningItem", item.id); });
+  test("Five recipe ingredients", () => { const data = res.getBody(); expect(data).to.have.lengthOf(5); bru.setVar("planningItems", JSON.stringify(data.map(item => item.id))); });
+  JSON.parse(bru.getVar("planningItems")).forEach((id, i) => bru.setVar("planningRemove"+i, id));
+}

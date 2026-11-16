@@ -1,0 +1,23 @@
+meta {
+  name: POST /me/shopping-list (shopping-invalid)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/me/shopping-list
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"meals": []}
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

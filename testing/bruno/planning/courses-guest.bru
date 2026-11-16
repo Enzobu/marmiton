@@ -1,0 +1,15 @@
+meta {
+  name: GET /me/shopping-list (courses-guest)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/me/shopping-list
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

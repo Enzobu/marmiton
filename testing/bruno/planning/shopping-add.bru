@@ -1,0 +1,23 @@
+meta {
+  name: POST /me/shopping-list (shopping-add)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/me/shopping-list
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"meals": [{"recipeId": "00000000-0000-4000-8000-000000000001", "servings": 2}]}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

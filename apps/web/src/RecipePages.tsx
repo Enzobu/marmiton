@@ -50,11 +50,12 @@ function IngredientPicture({ icon }: { icon: Ingredient['icon'] }) {
   </span>;
 }
 
-export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping, onPlanMeal, notesEmail }: { recipe: Recipe; notesEmail?: string; addToShopping: (servings: number) => void; onPlanMeal: (servings: number, date: string) => boolean } & SharedProps) {
+export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token, addToShopping, onPlanMeal, showNotes }: { recipe: Recipe; showNotes: boolean; addToShopping: (servings: number) => Promise<void>; onPlanMeal: (servings: number, date: string) => Promise<boolean> } & SharedProps) {
   const [servings, setServings] = useState(recipe.servings ?? BASE_SERVINGS);
   const [checked, setChecked] = useState<string[]>([]);
   const [finishedSteps, setFinishedSteps] = useState<number[]>([]);
   const [cooking, setCooking] = useState(false);
+  const [shoppingPending, setShoppingPending] = useState(false);
   const image = useAuthenticatedImage(recipe.image, recipe.privateImage, token);
   const metadata = recipe.preparation ?? recipePreparation[recipe.id] ?? { prep: recipe.time, cook: 0, rest: 0, budget: 'Bon marché', utensils: ['Saladier', 'Couteau'] };
   const ingredients = ingredientsForRecipe(recipe);
@@ -70,7 +71,10 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
           <div className="servings-control"><div><Glyph name="people" size={20}/><span>Nombre de portions</span></div><div className="servings-stepper"><button type="button" onClick={() => setServings(current => Math.max(1, current - 1))} disabled={servings <= 1} aria-label="Diminuer le nombre de personnes"><Glyph name="minus" size={17}/></button><output aria-live="polite">{servings}</output><button type="button" onClick={() => setServings(current => Math.min(12, current + 1))} disabled={servings >= 12} aria-label="Augmenter le nombre de personnes"><Glyph name="plus" size={17}/></button></div></div>
           <p className="panel-hint">Les quantités s’adaptent automatiquement au nombre de personnes.</p>
           <ul className="ingredient-list">{ingredients.map(ingredient => <li key={ingredient.name}><label className={checked.includes(ingredient.name) ? 'ingredient-checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.name)} onChange={() => setChecked(current => current.includes(ingredient.name) ? current.filter(item => item !== ingredient.name) : [...current, ingredient.name])}/><IngredientPicture icon={ingredient.icon}/><span className="ingredient-description"><strong>{formatQuantity(ingredient, servings, ingredientBaseServings(recipe))}</strong><span>{ingredient.name}</span></span></label></li>)}</ul>
-          {ingredients.length > 0 && <div className="planning-actions"><button type="button" className="detail-outline-button" onClick={() => addToShopping(servings)}>Ajouter à la liste de courses</button>{token && <a className="planning-link" href="/shopping-list" onClick={event => { event.preventDefault(); navigate('/shopping-list'); }}>Voir la liste</a>}</div>}
+          {ingredients.length > 0 && <div className="planning-actions"><button type="button" className="detail-outline-button" disabled={shoppingPending} onClick={async () => {
+            setShoppingPending(true);
+            try { await addToShopping(servings); } finally { setShoppingPending(false); }
+          }}>Ajouter à la liste de courses</button>{token && <a className="planning-link" href="/shopping-list" onClick={event => { event.preventDefault(); navigate('/shopping-list'); }}>Voir la liste</a>}</div>}
           <MealDateForm servings={servings} onPlan={date => onPlanMeal(servings, date)}/>
           <div className="utensil-block"><h3>Ustensiles</h3><ul>{metadata.utensils.map(item => <li key={item}><Glyph name="chef" size={17}/>{item}</li>)}</ul></div>
           <div className="panel-note"><strong>Petit conseil</strong><p>Cochez les ingrédients à mesure que vous les préparez.</p></div>
@@ -80,7 +84,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
           <div className="detail-tip"><span className="tip-icon"><Glyph name="chef" size={24}/></span><div><strong>Conseil de préparation</strong><p>Préparez les ingrédients et les ustensiles avant de commencer.</p></div></div>
         </div>
       </div>
-      {notesEmail && <RecipeNotes key={notesEmail} email={notesEmail} recipeId={recipe.id}/>}
+      {showNotes && token && <RecipeNotes key={token} token={token} recipeId={recipe.id}/>}
       <div className="detail-bottom-nav"><a href="/recipes" onClick={event => { event.preventDefault(); navigate('/recipes'); }}><Glyph name="back"/>Retour aux recettes</a></div>
     </div>
   </main>;

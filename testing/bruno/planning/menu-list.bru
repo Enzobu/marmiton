@@ -1,0 +1,20 @@
+meta {
+  name: GET /me/weekly-menu?from=2031-01-06 (menu-list)
+  type: http
+  seq: 22
+}
+
+get {
+  url: {{baseUrl}}/me/weekly-menu?from=2031-01-06
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Meal details", () => { const data = res.getBody(); const meal = data.find(item => item.id === bru.getVar("plannedMeal")); expect(meal.servings).to.equal(6); expect(meal.date).to.equal("2031-01-07"); expect(meal.title).to.be.a("string"); });
+}

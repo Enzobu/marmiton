@@ -1,0 +1,23 @@
+meta {
+  name: POST /me/shopping-list (shopping-missing-recipe)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/me/shopping-list
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"meals": [{"recipeId": "00000000-0000-4000-8000-999999999999", "servings": 2}]}
+}
+
+tests {
+  test("HTTP 404", () => expect(res.getStatus()).to.equal(404));
+}

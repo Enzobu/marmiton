@@ -1,4 +1,4 @@
-import { normalizeIngredient } from './local-planning.ts';
+import { normalizeIngredient } from './normalize-ingredient.ts';
 import type { Recipe } from './recipe-data';
 
 export function pantryMatches<T extends Pick<Recipe, 'ingredients' | 'title'>>(recipes: T[], input: string) {

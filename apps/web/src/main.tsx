@@ -1,12 +1,12 @@
+import { planningRequest } from './planning-api';
 import { PantrySearch } from './PantrySearch';
 import { WeeklyMenu } from './WeeklyMenu';
 import type { PlannedMeal } from './weekly-menu';
 import { ShoppingList } from './ShoppingList';
-import { accountStorageKey, mergeShoppingItems, readAccountList, type ShoppingItem } from './local-planning';
 import { RECIPE_DIFFICULTIES } from './recipe-json';
 import { SelectField } from './SelectField';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { formatTime, ingredientBaseServings, ingredientsForRecipe, recipePath, type Recipe } from './recipe-data';
+import { formatTime, recipePath, type Recipe } from './recipe-data';
 import { RecipeDetail, RecipeCreate, type RecipeSubmission } from './RecipePages';
 import { parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES } from './AuthPages';
@@ -201,64 +201,45 @@ function App() {
   const accountRoute = ({ '/profile': 'profile', '/my-recipes': 'my-recipes', '/favorites': 'favorites' } as Record<string, AccountRoute>)[path];
   const isShoppingList = path === '/shopping-list';
   const isWeeklyMenu = path === '/weekly-menu';
-  function addItemsToShopping(email: string, meals: { recipe: Recipe; servings: number }[]) {
-    const key = accountStorageKey('shopping', email);
-    const additions = meals.flatMap(({ recipe, servings }) =>
-      ingredientsForRecipe(recipe).map(({ name, amount, unit }) => ({
-        name, amount: amount === null ? null : amount * servings / ingredientBaseServings(recipe),
-        unit, checked: false, id: globalThis.crypto?.randomUUID?.() ?? String(Math.random()),
-      })));
-    const next = mergeShoppingItems(readAccountList<ShoppingItem>(key), additions);
-    localStorage.setItem(key, JSON.stringify(next));
-  }
-  function addToShopping(recipe: Recipe, servings: number) {
+  function planningSession() {
     if (sessionPending || sessionError) {
       notify('Impossible de vérifier la connexion pour le moment.', 'error');
-      return;
+      return null;
     }
-    if (!profile) { navigate('/login'); return; }
-    try {
-      addItemsToShopping(profile.email, [{ recipe, servings }]);
-      notify('Ingrédients ajoutés à la liste de courses.');
-    } catch { notify('Impossible d’enregistrer la liste dans ce navigateur.', 'error'); }
+    if (!profile || !accessToken) { navigate('/login'); return null; }
+    return accessToken;
   }
-  function planMeal(recipe: Recipe, servings: number, date: string) {
-    if (sessionPending || sessionError) {
-      notify('Impossible de vérifier la connexion pour le moment.', 'error');
-      return false;
-    }
-    if (!profile) { navigate('/login'); return false; }
+
+  async function saveShopping(meals: { recipeId: Recipe['id']; servings: number }[], success: string) {
+    const token = planningSession();
+    if (!token) return;
     try {
-      const key = accountStorageKey('weekly-menu', profile.email);
-      const meals = readAccountList<PlannedMeal>(key);
-      meals.push({ id: globalThis.crypto?.randomUUID?.() ?? String(Math.random()), date, servings, recipeId: recipe.id, title: recipe.title });
-      localStorage.setItem(key, JSON.stringify(meals));
+      await planningRequest('/me/shopping-list', token, { method: 'POST', body: JSON.stringify({ meals }) });
+      notify(success);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      notify('Impossible d’ajouter les ingrédients à la liste de courses.', 'error');
+    }
+  }
+
+  async function planMeal(recipe: Recipe, servings: number, date: string) {
+    const token = planningSession();
+    if (!token) return false;
+    try {
+      await planningRequest('/me/weekly-menu', token, {
+        method: 'POST', body: JSON.stringify({ recipeId: recipe.id, servings, date }),
+      });
       notify('Repas ajouté au menu de la semaine.');
       return true;
-    } catch {
-      notify('Impossible d’enregistrer le repas dans ce navigateur.', 'error');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      notify('Impossible d’enregistrer le repas.', 'error');
       return false;
     }
   }
-  async function addWeeklyMenuToShopping(meals: PlannedMeal[]) {
-    if (!profile) return;
-    const email = profile.email;
-    let entries;
-    try {
-      const ids = [...new Set(meals.map(meal => meal.recipeId))];
-      const loaded = await Promise.all(ids.map(async id => [id, fromApiRecipe(
-        await apiRequest<ApiRecipe>(recipePath(id), { headers: authHeaders(accessToken) })
-      )] as const));
-      const recipes = new Map(loaded);
-      entries = meals.map(meal => ({ recipe: recipes.get(meal.recipeId)!, servings: meal.servings }));
-    } catch {
-      notify('Impossible de charger toutes les recettes du menu. Vérifiez qu’elles sont toujours disponibles.', 'error');
-      return;
-    }
-    try {
-      addItemsToShopping(email, entries);
-      notify('Menu ajouté à la liste de courses.');
-    } catch { notify('Impossible d’enregistrer la liste dans ce navigateur.', 'error'); }
+
+  function addWeeklyMenuToShopping(meals: PlannedMeal[]) {
+    return saveShopping(meals.map(({ recipeId, servings }) => ({ recipeId, servings })), 'Menu ajouté à la liste de courses.');
   }
   const isHome = path === '/';
   const activeNav = path === '/' ? 'home'
@@ -489,10 +470,10 @@ function App() {
     </main>}
     {(isShoppingList || isWeeklyMenu) && sessionPending && <p className="section-container" role="status">Vérification de la connexion…</p>}
     {(isShoppingList || isWeeklyMenu) && sessionError && <p className="section-container" role="alert">Impossible de vérifier la connexion. Rechargez la page.</p>}
-    {isShoppingList && profile && <ShoppingList key={profile.email} email={profile.email}/>}
-    {isWeeklyMenu && profile && <WeeklyMenu key={profile.email} email={profile.email} onAddToShopping={addWeeklyMenuToShopping}/>}
+    {isShoppingList && profile && accessToken && <ShoppingList key={accessToken} token={accessToken}/>}
+    {isWeeklyMenu && profile && accessToken && <WeeklyMenu key={accessToken} token={accessToken} onAddToShopping={addWeeklyMenuToShopping}/>}
     {isPantrySearch && <PantrySearch/>}
-    {selectedRecipe && <RecipeDetail notesEmail={profile?.email} onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => addToShopping(selectedRecipe, servings)} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
+    {selectedRecipe && <RecipeDetail showNotes={Boolean(profile)} onPlanMeal={(servings, date) => planMeal(selectedRecipe, servings, date)} addToShopping={servings => saveShopping([{ recipeId: selectedRecipe.id, servings }], 'Ingrédients ajoutés à la liste de courses.')} token={accessToken} key={selectedRecipe.id} recipe={selectedRecipe} navigate={navigate} favorite={favorites.includes(selectedRecipe.id)} toggleFavorite={toggleFavorite}/>}
     {isCreate && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} developerMode={developerMode} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {editRecipe && profile && <RecipeCreate token={accessToken} defaultPublic={profile.publicRecipes} key={editRecipe.id} developerMode={developerMode} initialRecipe={editRecipe} navigate={navigate} onCreate={addCreatedRecipe}/>}
     {authPage && <AuthPage key={authPage} page={authPage} navigate={navigate} signedIn={Boolean(profile)} sessionPending={sessionPending} onReset={() => { invalidateSession(); navigate('/login'); notify('Mot de passe réinitialisé.'); }} onLogin={({ profile: user, accessToken: token }, remember) => {

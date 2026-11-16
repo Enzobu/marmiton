@@ -1,0 +1,24 @@
+meta {
+  name: POST /auth/logout (logout)
+  type: http
+  seq: 32
+}
+
+post {
+  url: {{baseUrl}}/auth/logout
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+  bru.deleteVar("accessToken");
+}

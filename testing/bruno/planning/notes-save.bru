@@ -1,0 +1,23 @@
+meta {
+  name: PUT /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-save)
+  type: http
+  seq: 28
+}
+
+put {
+  url: {{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"note": "Préparer la sauce la veille."}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

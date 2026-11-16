@@ -6,6 +6,7 @@ import type { SendResetMail } from './reset-mail.js';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
 import { registerAccount } from './account.js';
+import { registerPlanning } from './planning.js';
 import { imageStore } from './images.js';
 import { registerRecipeWrites } from './recipe-writes.js';
 import { registerVersion } from './version.js';
@@ -25,6 +26,7 @@ export function buildApp(options: { mail?: SendResetMail; uploadDirectory?: stri
   const images = imageStore(options.uploadDirectory);
   registerRecipeWrites(app, db, images);
   registerAccount(app, db, images);
+  registerPlanning(app, db);
   app.after(() => registerAuth(app, db, options.mail));
   app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: 'Not Found' }));
   return app;

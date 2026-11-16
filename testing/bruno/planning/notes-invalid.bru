@@ -1,0 +1,23 @@
+meta {
+  name: PUT /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-invalid)
+  type: http
+  seq: 27
+}
+
+put {
+  url: {{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"note": 42}
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}
