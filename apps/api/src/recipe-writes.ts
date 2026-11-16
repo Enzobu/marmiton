@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireSession } from './auth.js';
 import { recipeResponse, recipeRelations } from './catalog.js';
+import { imageUploadBodyLimit, maxImageDataUrlLength } from './image-limits.js';
 import { imageStore, imageNamePattern, parseImage } from './images.js';
 import { inferIngredientIcon, ingredientNameKey } from './ingredient-icons.js';
 import { validateRecipeJson, type RecipeJson } from './recipe-json.js';
@@ -10,7 +11,7 @@ import { validateRecipeJson, type RecipeJson } from './recipe-json.js';
 const payload = z.object({
   recipe: z.unknown(),
   isPublic: z.boolean(),
-  photo: z.string().max(2_666_700).optional(),
+  photo: z.string().max(maxImageDataUrlLength).optional(),
   keepPhoto: z.boolean().optional(),
 }).strict();
 
@@ -56,7 +57,7 @@ export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, ima
 
   for (const method of ['POST', 'PUT'] as const) {
     app.route({
-      method, url: method === 'POST' ? '/recipes' : '/recipes/:id', bodyLimit: 3_600_000,
+      method, url: method === 'POST' ? '/recipes' : '/recipes/:id', bodyLimit: imageUploadBodyLimit,
       async handler(request, reply) {
         if (!await requireSession(request, reply, db)) return;
         const id = (request.params as { id?: string } | undefined)?.id;

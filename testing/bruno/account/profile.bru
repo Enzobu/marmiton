@@ -21,8 +21,16 @@ body:json {
     "bio": "Profil de test HTTP",
     "newsletter": false,
     "publicRecipes": true,
-    "photo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jCt8AAAAASUVORK5CYII="
+    "photo": "{{limitPhoto}}"
   }
+}
+
+script:pre-request {
+  // Pad a 1px PNG to exactly 5,000,000 decoded bytes.
+  const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jCt8AAAAASUVORK5CYII";
+  const base64Length = 4 * Math.ceil(5_000_000 / 3);
+  const photo = png + "A".repeat(base64Length - png.split(",")[1].length - 1) + "=";
+  bru.setVar("limitPhoto", photo);
 }
 
 tests {

@@ -3,20 +3,21 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { profileResponse, profileSelect, requireSession } from './auth.js';
 import { recipeRelations, recipeResponse } from './catalog.js';
+import { imageUploadBodyLimit, maxImageDataUrlLength } from './image-limits.js';
 import { imageNamePattern, imageStore, parseImage } from './images.js';
 
 const name = z.string().trim().min(1).max(70);
 const profileSchema = z.object({
   firstName: name, lastName: name, bio: z.string().trim().max(1000),
   newsletter: z.boolean(), publicRecipes: z.boolean(),
-  photo: z.string().max(2_666_700).nullable().optional(),
+  photo: z.string().max(maxImageDataUrlLength).nullable().optional(),
 }).strict();
 const uuid = z.string().uuid();
 
 export function registerAccount(app: FastifyInstance, db: PrismaClient, images: ReturnType<typeof imageStore>) {
   const cleanup = (path: string | null | undefined) => images.remove(path).catch(() => app.log.error('Could not remove obsolete avatar'));
 
-  app.put('/me/profile', { bodyLimit: 3_000_000 }, async (request, reply) => {
+  app.put('/me/profile', { bodyLimit: imageUploadBodyLimit }, async (request, reply) => {
     const session = await requireSession(request, reply, db);
     if (!session) return;
     const parsed = profileSchema.safeParse(request.body);
