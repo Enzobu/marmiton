@@ -49,6 +49,11 @@ body:json {
           "name": "Graisse de canard",
           "quantity": 1,
           "unit": ""
+        },
+        {
+          "name": "Champigon",
+          "quantity": 1,
+          "unit": ""
         }
       ],
       "utensils": [
@@ -71,4 +76,5 @@ tests {
   test("Cuisses de canard confites icon", () => expect(res.getBody().quantities.find(item => item.name === "Cuisses de canard confites").icon).to.equal("meat"));
   test("Bouquet garni icon", () => expect(res.getBody().quantities.find(item => item.name === "Bouquet garni").icon).to.equal("spice"));
   test("Graisse de canard icon", () => expect(res.getBody().quantities.find(item => item.name === "Graisse de canard").icon).to.equal("other"));
+  test("Icon for a misspelled ingredient", () => expect(res.getBody().quantities.find(item => item.name === "Champigon").icon).to.equal("vegetable"));
 }

@@ -1,3 +1,4 @@
+import { correctIngredientKeyword } from '../../api/src/ingredient-icons.ts';
 import { normalizeIngredient } from './normalize-ingredient';
 import type { Ingredient } from './recipe-data';
 
@@ -50,7 +51,9 @@ export function IngredientPicture({ ingredient }: { ingredient: Pick<Ingredient,
   const name = normalizeIngredient(ingredient.name);
   const useFamilyPicture = /^(?:bouillons?|fonds?|fumets?|graisses?|huiles?)\b|^lait (?:de |d')(?:amandes?|avoine|coco|soja)\b/.test(name);
   const specificPicture = useFamilyPicture ? undefined : ingredientPictures.find(([pattern]) => pattern.test(name))?.[1];
-  const picture = specificPicture ?? familyPictures[ingredient.icon];
+  const corrected = !useFamilyPicture && !specificPicture ? correctIngredientKeyword(name) : undefined;
+  const correctedPicture = corrected && ingredientPictures.find(([pattern]) => pattern.test(corrected))?.[1];
+  const picture = specificPicture ?? (correctedPicture || familyPictures[ingredient.icon]);
   return <span className={`ingredient-picture ingredient-${ingredient.icon}`} aria-hidden="true">
     <svg width="31" height="31" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round">
       <path d={picture}/>

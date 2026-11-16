@@ -706,7 +706,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"recipe\": {\n    \"schemaVersion\": 1,\n    \"title\": \"Recette modifi\\u00e9e\",\n    \"description\": \"Fixture HTTP\",\n    \"category\": \"Plats\",\n    \"difficulty\": \"Difficile\",\n    \"servings\": 2,\n    \"times\": {\n      \"preparation\": 5,\n      \"cooking\": 10,\n      \"rest\": 0\n    },\n    \"budget\": \"Bon march\\u00e9\",\n    \"ingredients\": [\n      {\n        \"name\": \"Cannelle moulue\",\n        \"quantity\": 25,\n        \"unit\": \"g\"\n      },\n      {\n        \"name\": \"Cuisses de canard confites\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Bouquet garni\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Graisse de canard\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      }\n    ],\n    \"utensils\": [\n      \"Bol\"\n    ],\n    \"steps\": [\n      \"M\\u00e9langer.\"\n    ],\n    \"imageUrl\": null\n  },\n  \"isPublic\": true\n}"
+              "raw": "{\n  \"recipe\": {\n    \"schemaVersion\": 1,\n    \"title\": \"Recette modifi\\u00e9e\",\n    \"description\": \"Fixture HTTP\",\n    \"category\": \"Plats\",\n    \"difficulty\": \"Difficile\",\n    \"servings\": 2,\n    \"times\": {\n      \"preparation\": 5,\n      \"cooking\": 10,\n      \"rest\": 0\n    },\n    \"budget\": \"Bon march\\u00e9\",\n    \"ingredients\": [\n      {\n        \"name\": \"Cannelle moulue\",\n        \"quantity\": 25,\n        \"unit\": \"g\"\n      },\n      {\n        \"name\": \"Cuisses de canard confites\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Bouquet garni\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Graisse de canard\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Champigon\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      }\n    ],\n    \"utensils\": [\n      \"Bol\"\n    ],\n    \"steps\": [\n      \"M\\u00e9langer.\"\n    ],\n    \"imageUrl\": null\n  },\n  \"isPublic\": true\n}"
             }
           },
           "event": [
@@ -721,7 +721,8 @@
                   "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Cannelle moulue\").icon).to.equal(\"spice\"));",
                   "pm.test(\"Cuisses de canard confites icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Cuisses de canard confites\").icon).to.equal(\"meat\"));",
                   "pm.test(\"Bouquet garni icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Bouquet garni\").icon).to.equal(\"spice\"));",
-                  "pm.test(\"Graisse de canard icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Graisse de canard\").icon).to.equal(\"other\"));"
+                  "pm.test(\"Graisse de canard icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Graisse de canard\").icon).to.equal(\"other\"));",
+                  "pm.test(\"Icon for a misspelled ingredient\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Champigon\").icon).to.equal(\"vegetable\"));"
                 ]
               }
             }

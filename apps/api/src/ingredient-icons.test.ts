@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inferIngredientIcon } from './ingredient-icons.js';
+import { correctIngredientKeyword, inferIngredientIcon } from './ingredient-icons.js';
 
 test('Ingredient icons recognize French plurals, accents and whole words', () => {
   for (const [name, icon] of [
@@ -47,4 +47,28 @@ test('Cassoulet ingredients distinguish meats, aromatics and cooking preparation
     ['Fond de veau', 'other'],
     ['Huile d’olive', 'other'],
   ]) assert.equal(inferIngredientIcon(name), icon, name);
+});
+
+test('A single typo can select a unique known ingredient without changing the name', () => {
+  for (const [name, expectedWord, icon] of [
+    ['champigon', 'champignon', 'vegetable'],
+    ['Champigons frais', 'champignon', 'vegetable'],
+    ['champigons de Paris', 'champignon', 'vegetable'],
+    ['Mozarella', 'mozzarella', 'dairy'],
+    ['CAROTTEES', 'carotte', 'vegetable'],
+    ['Frabmoise', 'framboise', 'vegetable'],
+    ['Champignom', 'champignon', 'vegetable'],
+  ]) {
+    assert.equal(correctIngredientKeyword(name), expectedWord, name);
+    assert.equal(inferIngredientIcon(name), icon, name);
+  }
+});
+
+test('Short words, ambiguous matches and bigger differences are left alone', () => {
+  for (const name of ['aill', 'riiz', 'poivronn poirau', 'chamgnon', 'chocolat', 'Extrait frais']) {
+    assert.equal(correctIngredientKeyword(name), undefined, name);
+    assert.equal(inferIngredientIcon(name), 'other', name);
+  }
+  assert.equal(correctIngredientKeyword('Tomate et champigon'), undefined);
+  assert.equal(inferIngredientIcon('Tomate et champigon'), 'vegetable');
 });

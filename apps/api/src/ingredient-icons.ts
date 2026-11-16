@@ -40,6 +40,41 @@ for (const [icon, words] of Object.entries(keywords) as [Exclude<IngredientIcon,
   for (const word of words) iconsByWord.set(word, icon);
 }
 
+function exactKeyword(word: string) {
+  return iconsByWord.get(word) ?? (word.endsWith('s') ? iconsByWord.get(word.slice(0, -1)) : undefined);
+}
+
+function differsByOneEdit(word: string, candidate: string) {
+  const lengthDifference = word.length - candidate.length;
+  if (Math.abs(lengthDifference) > 1) return false;
+  let index = 0;
+  while (index < word.length && word[index] === candidate[index]) index++;
+  if (lengthDifference === 1) return word.slice(index + 1) === candidate.slice(index);
+  if (lengthDifference === -1) return word.slice(index) === candidate.slice(index + 1);
+  if (index === word.length) return false;
+  return word.slice(index + 1) === candidate.slice(index + 1) ||
+    (word[index] === candidate[index + 1] && word[index + 1] === candidate[index] &&
+      word.slice(index + 2) === candidate.slice(index + 2));
+}
+
+const preparationWords = new Set(['frais', 'fraiche', 'fraiches', 'seche', 'seches', 'moulu', 'moulue', 'moulus', 'moulues', 'entier', 'entiere']);
+const longKeywords = [...iconsByWord.keys()].filter(word => word.length >= 5);
+
+export function correctIngredientKeyword(name: string): string | undefined {
+  const words = ingredientNameKey(name).split(' ');
+  if (words.some(exactKeyword)) return undefined;
+  let match: string | undefined;
+  for (const word of words) {
+    if (word.length < 5 || preparationWords.has(word)) continue;
+    for (const candidate of longKeywords) {
+      if (!differsByOneEdit(word, candidate) && !differsByOneEdit(word, candidate + 's')) continue;
+      if (match && match !== candidate) return undefined;
+      match = candidate;
+    }
+  }
+  return match;
+}
+
 export function inferIngredientIcon(name: string): IngredientIcon {
   const words = ingredientNameKey(name).split(' ');
   const [firstWord] = words;
@@ -50,8 +85,9 @@ export function inferIngredientIcon(name: string): IngredientIcon {
     if (normalized.includes(' ' + expression + ' ')) return icon;
   }
   for (const word of words) {
-    const icon = iconsByWord.get(word) ?? (word.endsWith('s') ? iconsByWord.get(word.slice(0, -1)) : undefined);
+    const icon = exactKeyword(word);
     if (icon) return icon;
   }
-  return 'other';
+  const corrected = correctIngredientKeyword(name);
+  return corrected ? iconsByWord.get(corrected) ?? 'other' : 'other';
 }
