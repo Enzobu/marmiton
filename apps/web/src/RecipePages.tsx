@@ -124,11 +124,11 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
         </aside>
         <div className="preparation-panel"><span className="section-kicker">Étapes</span><h2>La préparation</h2><p className="preparation-lead">Marquez chaque étape une fois terminée pour suivre votre progression.</p>{recipe.steps.length > 0 && <div className="planning-actions cooking-launch">
           <button type="button" className="detail-outline-button" onClick={() => {
-            setCookingStep(activeStep);
+            setCookingStep(Math.max(firstUnfinishedStep, 0));
             setCooking(true);
           }}>{!allStepsFinished && (cookingStep !== undefined || finishedSteps.length > 0) ? 'Reprendre le mode cuisine' : 'Lancer le mode cuisine'}</button>
         </div>}<div className="preparation-progress"><div><strong>{finishedSteps.length} / {recipe.steps.length}</strong> étapes terminées</div>
-          {cookingStep !== undefined && !allStepsFinished && <p className="cooking-resume">Étape en cours : {activeStep + 1}</p>}<div className="progress-track"><span style={{ width: `${recipe.steps.length ? 100 * finishedSteps.length / recipe.steps.length : 0}%` }}/></div></div>
+          {!allStepsFinished && !cooking && (cookingStep !== undefined || finishedSteps.length > 0) && <p className="cooking-resume">Étape en cours : {firstUnfinishedStep + 1}</p>}<div className="progress-track"><span style={{ width: `${recipe.steps.length ? 100 * finishedSteps.length / recipe.steps.length : 0}%` }}/></div></div>
           <ol className="step-list">{recipe.steps.map((step, index) => <li className={finishedSteps.includes(index) ? 'step-done' : ''} key={index}><button type="button" className="step-number" aria-label={finishedSteps.includes(index) ? `Marquer l’étape ${index + 1} non terminée` : `Marquer l’étape ${index + 1} terminée`} aria-pressed={finishedSteps.includes(index)} onClick={() => setFinishedSteps(current => current.includes(index) ? current.filter(item => item !== index) : [...current, index])}>{finishedSteps.includes(index) ? <Glyph name="check" size={20}/> : (index + 1).toString().padStart(2, '0')}</button><div><h3>Étape {index + 1}</h3><p>{step}</p></div></li>)}</ol>
           <div className="detail-tip"><span className="tip-icon"><Glyph name="chef" size={24}/></span><div><strong>Conseil de préparation</strong><p>Préparez les ingrédients et les ustensiles avant de commencer.</p></div></div>
         </div>
