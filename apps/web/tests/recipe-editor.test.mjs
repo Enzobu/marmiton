@@ -9,7 +9,8 @@ const app = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
 test('Recipe editor supports local photo selection and validation', () => {
   assert.match(editor, /<ImagePicker /);
   assert.match(imagePicker, /type="file"/);
-  assert.equal([...editor.matchAll(/>Retirer la photo<\/button>/g)].length, 1);
+  assert.equal([...imagePicker.matchAll(/>Retirer la photo<\/button>/g)].length, 1);
+  assert.match(editor, /onRemove=\{\(\) => setImage\(''\)\}/);
   assert.match(editor, /validateRecipeImage\(file\)/);
   assert.match(draft, /file.size > maxImageBytes/);
   assert.match(imagePicker, /\{MAX_IMAGE_MB\} Mo maximum/);
