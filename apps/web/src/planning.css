@@ -26,3 +26,17 @@
 .recipe-notes{margin-block:24px}
 .planning-list .planning-link{overflow-wrap:anywhere}
 @media print{.recipe-notes{display:none}}
+
+.planning-button{text-decoration:none;width:fit-content;max-width:100%}
+.planning-button svg{flex-shrink:0}
+.catalog-pantry-button{margin-top:12px}
+.cooking-launch{margin-bottom:14px}
+.cooking-resume{margin:5px 0 0;color:var(--color-muted)}
+.shopping-add{min-width:min(195px,100%);transition:background-color .2s,border-color .2s,color .2s}
+.planning-actions .detail-outline-button.shopping-add.is-added{background:#32734c;border-color:#32734c;color:#fff;opacity:1}
+.shopping-add.is-added svg{animation:shopping-check .25s ease-out}
+@keyframes shopping-check{from{opacity:0;transform:scale(.65)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){
+  .shopping-add{transition:none}
+  .shopping-add.is-added svg{animation:none}
+}
