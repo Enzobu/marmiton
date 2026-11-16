@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { apiRequest, authHeaders } from './api';
 
-export type ShoppingItem = { id: string; name: string; amount: number | null; unit: string | null; checked: boolean };
+export type ShoppingContribution = { recipeId: string | null; recipeTitle: string | null; amount: number | null };
+export type ShoppingItem = {
+  id: string;
+  name: string;
+  amount: number | null;
+  unit: string | null;
+  checked: boolean;
+  contributions: ShoppingContribution[];
+};
 
 export function planningRequest<T>(path: string, token: string, options: RequestInit = {}) {
   return apiRequest<T>(path, {

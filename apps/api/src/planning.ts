@@ -1,4 +1,5 @@
-import { Prisma, type PrismaClient, type ShoppingItem } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import { Prisma, type PrismaClient, type ShoppingContribution, type ShoppingItem } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireSession } from './auth.js';
@@ -25,8 +26,25 @@ function ingredientKey(name: string, unit: string | null) {
   return JSON.stringify([normalize(name), normalize(unit ?? '')]);
 }
 
-function shoppingItem({ id, name, unit, amount, checked }: ShoppingItem) {
-  return { id, name, unit, amount: amount?.toNumber() ?? null, checked };
+type Contribution = Pick<ShoppingContribution, 'recipeId' | 'recipeTitle' | 'amount'>;
+const amountScale = 12;
+
+function shoppingItem({ id, name, unit, amount, checked, contributions }: ShoppingItem & { contributions: Contribution[] }) {
+  const byRecipe = new Map<string | null, Contribution>();
+  for (const contribution of contributions) {
+    const previous = byRecipe.get(contribution.recipeId);
+    const combined = previous?.amount && contribution.amount
+      ? previous.amount.plus(contribution.amount)
+      : contribution.amount;
+    byRecipe.set(contribution.recipeId, { ...contribution, amount: combined });
+  }
+  if (!byRecipe.size) byRecipe.set(null, { recipeId: null, recipeTitle: null, amount });
+  return {
+    id, name, unit, amount: amount?.toNumber() ?? null, checked,
+    contributions: Array.from(byRecipe.values(), ({ recipeId, recipeTitle, amount }) => ({
+      recipeId, recipeTitle, amount: amount?.toNumber() ?? null,
+    })),
+  };
 }
 
 function lockOwner(tx: Prisma.TransactionClient, ownerId: number) {
@@ -39,6 +57,7 @@ export function registerPlanning(app: FastifyInstance, db: PrismaClient) {
     if (!session) return;
     const items = await db.shoppingItem.findMany({
       where: { ownerId: session.ownerId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      include: { contributions: { orderBy: { id: 'asc' } } },
     });
     return reply.header('Cache-Control', 'no-store').send(items.map(shoppingItem));
   });
@@ -56,41 +75,53 @@ export function registerPlanning(app: FastifyInstance, db: PrismaClient) {
       await lockOwner(tx, ownerId);
       const recipes = await tx.recipe.findMany({
         where: { id: { in: ids } },
-        select: { id: true, servings: true, ingredients: { orderBy: { position: 'asc' } } },
+        select: { id: true, title: true, servings: true, ingredients: { orderBy: { position: 'asc' } } },
       });
       const byId = new Map(recipes.map(recipe => [recipe.id.toLowerCase(), recipe]));
       if (ids.some(id => !byId.has(id))) return false;
 
-      const pending = await tx.shoppingItem.findMany({ where: { ownerId, checked: false, amount: { not: null } } });
-      const existing = new Map(pending.map(item => [ingredientKey(item.name, item.unit), item.id]));
-      const additions: { name: string; unit: string | null; amount: Prisma.Decimal | null }[] = [];
+      const pending = await tx.shoppingItem.findMany({
+        where: { ownerId, checked: false, amount: { not: null } },
+        include: { _count: { select: { contributions: true } } },
+      });
+      const existing = new Map(pending.map(item => [ingredientKey(item.name, item.unit), item]));
+      const additions: { name: string; unit: string | null; amount: Prisma.Decimal | null; contributions: Contribution[] }[] = [];
       const quantified = new Map<string, typeof additions[number]>();
       for (const meal of meals) {
         const recipe = byId.get(meal.recipeId.toLowerCase())!;
         for (const { name, unit, quantity } of recipe.ingredients) {
-          const amount = quantity?.mul(meal.servings).div(recipe.servings) ?? null;
-          if (amount === null) {
-            additions.push({ name, unit, amount });
-            continue;
-          }
+          const amount = quantity?.mul(meal.servings).div(recipe.servings).toDecimalPlaces(amountScale) ?? null;
+          const contribution = { recipeId: recipe.id, recipeTitle: recipe.title, amount };
           const key = ingredientKey(name, unit);
-          const previous = quantified.get(key);
-          if (previous) previous.amount = previous.amount!.plus(amount);
-          else {
-            const addition = { name, unit, amount };
-            quantified.set(key, addition);
+          const previous = amount === null ? undefined : quantified.get(key);
+          if (previous && amount !== null) {
+            previous.amount = previous.amount!.plus(amount);
+            previous.contributions.push(contribution);
+          } else {
+            const addition = { name, unit, amount, contributions: [contribution] };
+            if (amount !== null) quantified.set(key, addition);
             additions.push(addition);
           }
         }
       }
 
-      const newItems = [];
-      for (const item of additions) {
-        const id = item.amount === null ? undefined : existing.get(ingredientKey(item.name, item.unit));
-        if (id) await tx.shoppingItem.update({ where: { id }, data: { amount: { increment: item.amount! } } });
-        else newItems.push({ ...item, ownerId });
+      const newItems: Prisma.ShoppingItemCreateManyInput[] = [];
+      const newContributions: Prisma.ShoppingContributionCreateManyInput[] = [];
+      for (const { contributions, ...item } of additions) {
+        const previous = item.amount === null ? undefined : existing.get(ingredientKey(item.name, item.unit));
+        const itemId = previous?.id ?? randomUUID();
+        if (previous) {
+          if (!previous._count.contributions) {
+            newContributions.push({ itemId, recipeId: null, recipeTitle: null, amount: previous.amount });
+          }
+          await tx.shoppingItem.update({ where: { id: itemId }, data: { amount: { increment: item.amount! } } });
+        } else {
+          newItems.push({ ...item, id: itemId, ownerId });
+        }
+        newContributions.push(...contributions.map(contribution => ({ ...contribution, itemId })));
       }
       if (newItems.length) await tx.shoppingItem.createMany({ data: newItems });
+      if (newContributions.length) await tx.shoppingContribution.createMany({ data: newContributions });
       return true;
     }, { timeout: 15000 });
     if (!result) return reply.code(404).send({ error: 'Recipe not found' });
@@ -109,6 +140,16 @@ export function registerPlanning(app: FastifyInstance, db: PrismaClient) {
       return tx.shoppingItem.updateMany({ where, data: body.data });
     });
     if (!result.count) return reply.code(404).send({ error: 'Shopping item not found' });
+    return reply.code(204).send();
+  });
+
+  app.delete('/me/shopping-list', async (request, reply) => {
+    const session = await requireSession(request, reply, db);
+    if (!session) return;
+    await db.$transaction(async tx => {
+      await lockOwner(tx, session.ownerId);
+      await tx.shoppingItem.deleteMany({ where: { ownerId: session.ownerId } });
+    });
     return reply.code(204).send();
   });
 

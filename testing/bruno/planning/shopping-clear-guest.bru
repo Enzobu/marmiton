@@ -1,0 +1,15 @@
+meta {
+  name: DELETE /me/shopping-list (shopping-clear-guest)
+  type: http
+  seq: 32
+}
+
+delete {
+  url: {{baseUrl}}/me/shopping-list
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

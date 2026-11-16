@@ -40,3 +40,9 @@
   .shopping-add{transition:none}
   .shopping-add.is-added svg{animation:none}
 }
+
+.shopping-views{margin-top:24px}
+.shopping-clear{color:#9d3e32}
+.shopping-recipe-group{margin-top:24px}
+.shopping-recipe-group h2{font-size:20px;line-height:1.35}
+.shopping-recipe-group .planning-list{margin-top:10px}

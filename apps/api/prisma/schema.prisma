@@ -105,16 +105,28 @@ model Favorite {
 }
 
 model ShoppingItem {
-  id        String   @id @default(uuid()) @db.Char(36)
-  ownerId   Int
-  name      String   @db.VarChar(160)
-  unit      String?  @db.VarChar(30)
-  amount    Decimal? @db.Decimal(30, 12)
-  checked   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id            String                 @id @default(uuid()) @db.Char(36)
+  ownerId       Int
+  name          String                 @db.VarChar(160)
+  unit          String?                @db.VarChar(30)
+  amount        Decimal?               @db.Decimal(30, 12)
+  checked       Boolean                @default(false)
+  createdAt     DateTime               @default(now())
+  owner         Owner                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  contributions ShoppingContribution[]
 
   @@index([ownerId, createdAt])
+}
+
+model ShoppingContribution {
+  id          String       @id @default(uuid()) @db.Char(36)
+  itemId      String       @db.Char(36)
+  recipeId    String?      @db.Char(36)
+  recipeTitle String?      @db.VarChar(200)
+  amount      Decimal?     @db.Decimal(30, 12)
+  item        ShoppingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
 }
 
 model PlannedMeal {

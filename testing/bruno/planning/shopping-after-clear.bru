@@ -1,0 +1,20 @@
+meta {
+  name: GET /me/shopping-list (shopping-after-clear)
+  type: http
+  seq: 35
+}
+
+get {
+  url: {{baseUrl}}/me/shopping-list
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Shopping list is empty", () => { const data = res.getBody(); expect(data).to.have.lengthOf(0); });
+}
