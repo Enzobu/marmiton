@@ -23,7 +23,7 @@ Dans Dokploy, choisir Docker Compose avec une source Git sur `main`, puis sélec
 - Router `marmiton.enzo-palermo.com` via Nginx Proxy Manager vers le service `web` sur le port conteneur 80.
 - Router `marmiton-api.enzo-palermo.com` vers `api` sur le port conteneur 3001 sans ouvrir ce port sur Internet. Si NPM passe par Traefik, conserver les deux noms d’hôte et les routes Dokploy correspondantes. Si NPM joint directement une autre machine, utiliser une adresse privée et limiter par pare-feu l’accès au port publié à la machine NPM.
 - Configurer `VITE_API_URL=https://marmiton-api.enzo-palermo.com` dans Compose avant le build du front.
-- Configurer `CORS_ORIGIN=https://marmiton.enzo-palermo.com`, `PUBLIC_WEB_URL=https://marmiton.enzo-palermo.com` et les paramètres `SMTP_*` côté API. Augmenter au besoin la limite de corps du proxy API à 4 Mo pour les photos encodées en JSON. Conserver HTTPS sur les deux hôtes publics.
+- Configurer `CORS_ORIGIN=https://marmiton.enzo-palermo.com`, `PUBLIC_WEB_URL=https://marmiton.enzo-palermo.com` et les paramètres `SMTP_*` côté API. Configurer `client_max_body_size 8m;` si le proxy Nginx du domaine API impose une limite plus basse. Les photos de 5 Mo dépassent 6,6 Mo une fois encodées dans le JSON. Conserver HTTPS sur les deux hôtes publics.
 - Pour une boîte OVHcloud MX Plan ou Zimbra en Europe, utiliser `SMTP_HOST=ssl0.ovh.net` et `SMTP_PORT=465`. Pour Email Pro, utiliser le serveur `proN.mail.ovh.net` indiqué dans le Manager et le port `587`. Renseigner l’adresse complète de la boîte dans `SMTP_USER` et son mot de passe dans `SMTP_PASSWORD`.
 - Vérifier dans le navigateur le catalogue, la connexion, puis un appel authentifié. Les collections de test utilisent la MariaDB de CI ou une instance locale isolée.
 

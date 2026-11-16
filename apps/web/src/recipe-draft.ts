@@ -1,3 +1,4 @@
+import { maxImageBytes } from '../../api/src/image-limits.ts';
 import type { RecipeDifficulty } from './recipe-json';
 
 export type RecipeDraft = {
@@ -17,7 +18,7 @@ export type RecipeDraft = {
 };
 
 export const DRAFT_STORAGE_KEY = 'petitsplats.recipe.draft.v2';
-export const MAX_RECIPE_IMAGE_SIZE = 2_000_000;
+export const MAX_IMAGE_MB = maxImageBytes / 1_000_000;
 export const ACCEPTED_RECIPE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 export function readDraft(): RecipeDraft | null {
@@ -48,6 +49,6 @@ export function clearDraft() {
 
 export function validateRecipeImage(file: File): string | null {
   if (!ACCEPTED_RECIPE_IMAGE_TYPES.some(type => type === file.type)) return 'Sélectionnez une image JPG, PNG ou WebP.';
-  if (file.size > MAX_RECIPE_IMAGE_SIZE) return 'La photo ne doit pas dépasser 2 Mo.';
+  if (file.size > maxImageBytes) return `La photo ne doit pas dépasser ${MAX_IMAGE_MB} Mo.`;
   return null;
 }

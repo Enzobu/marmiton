@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export const maxImageBytes = 2_000_000;
+import { maxImageBytes } from './image-limits.js';
 export const imageNamePattern = /^[0-9a-f-]{36}\.(jpeg|png|webp)$/;
 const types = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' } as const;
 
