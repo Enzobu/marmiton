@@ -1,5 +1,5 @@
 import { useId, type ChangeEvent } from 'react';
-import { ACCEPTED_RECIPE_IMAGE_TYPES } from './recipe-draft';
+import { ACCEPTED_RECIPE_IMAGE_TYPES, MAX_IMAGE_MB } from './recipe-draft';
 import './image-picker.css';
 
 export function ImagePicker({ label, hasImage, onChange }: {
@@ -20,6 +20,6 @@ export function ImagePicker({ label, hasImage, onChange }: {
         <span className="image-picker-status" aria-live="polite">{hasImage ? 'Photo disponible' : 'Aucune photo sélectionnée'}</span>
       </span>
     </label>
-    <small id={id}>JPG, PNG ou WebP, 2 Mo maximum.</small>
+    <small id={id}>JPG, PNG ou WebP, {MAX_IMAGE_MB} Mo maximum.</small>
   </div>;
 }

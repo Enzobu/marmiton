@@ -18,6 +18,16 @@ test('Image validation rejects data with the wrong format', () => {
   assert.equal(parseImage('data:image/svg+xml;base64,PHN2Zz4='), null);
 });
 
+test('Images are accepted at 5 MB and rejected one byte over', () => {
+  const encode = (size: number) => {
+    const bytes = Buffer.alloc(size);
+    Buffer.from(png.split(',')[1], 'base64').copy(bytes);
+    return 'data:image/png;base64,' + bytes.toString('base64');
+  };
+  assert.equal(parseImage(encode(5_000_000))?.bytes.length, 5_000_000);
+  assert.equal(parseImage(encode(5_000_001)), null);
+});
+
 test('Owner CRUD persists related rows and removes replaced images', { skip: !process.env.DATABASE_URL }, async () => {
   const dir = await mkdtemp(join(tmpdir(), 'marmiton-uploads-'));
   const app = buildApp({ uploadDirectory: dir });

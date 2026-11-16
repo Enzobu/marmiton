@@ -10,7 +10,8 @@ test('Recipe editor supports local photo selection and validation', () => {
   assert.match(editor, /<ImagePicker /);
   assert.match(imagePicker, /type="file"/);
   assert.match(editor, /validateRecipeImage\(file\)/);
-  assert.match(draft, /2_000_000/);
+  assert.match(draft, /file.size > maxImageBytes/);
+  assert.match(imagePicker, /\{MAX_IMAGE_MB\} Mo maximum/);
   assert.match(draft, /image\/webp/);
 });
 test('Drafts can be saved, resumed and cleared', () => {
