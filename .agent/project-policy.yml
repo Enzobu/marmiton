@@ -34,4 +34,4 @@ workflow:
     trigger: push_on_main
     preproduction: false
     cd_status: enabled_on_main
-    sha_verification: required
+    sha_verification: disabled

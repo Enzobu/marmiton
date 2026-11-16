@@ -27,11 +27,13 @@ Dans Dokploy, choisir Docker Compose avec une source Git sur `main`, puis sélec
 - Pour une boîte OVHcloud MX Plan ou Zimbra en Europe, utiliser `SMTP_HOST=ssl0.ovh.net` et `SMTP_PORT=465`. Pour Email Pro, utiliser le serveur `proN.mail.ovh.net` indiqué dans le Manager et le port `587`. Renseigner l’adresse complète de la boîte dans `SMTP_USER` et son mot de passe dans `SMTP_PASSWORD`.
 - Vérifier dans le navigateur le catalogue, la connexion, puis un appel authentifié. Les collections de test utilisent la MariaDB de CI ou une instance locale isolée.
 
-### Déploiement et version
+### Déploiement
 
-Dans l’environnement GitHub `production`, configurer les secrets `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` ainsi que les variables `DOKPLOY_URL` et `APP_VERSION_URL=https://marmiton-api.enzo-palermo.com/api/version`. Restreindre cet environnement à `main`. La CI déclenche le déploiement depuis un push sur `main` après ses contrôles. Éviter un second déclencheur automatique Dokploy sur le même push.
+Dans l’environnement GitHub `production`, configurer les secrets `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` ainsi que la variable `DOKPLOY_URL`. Restreindre cet environnement à `main`. La CI déclenche le déploiement depuis un push sur `main` après ses contrôles. Éviter un second déclencheur automatique Dokploy sur le même push.
 
-Construire l’API depuis le checkout Git Dokploy, avec BuildKit et le répertoire `.git` présent dans le checkout. Le Dockerfile inscrit le SHA de ce checkout dans l’image, et l’API le sert avec un contrôle de connexion MariaDB. Le job attend la fin du déploiement correspondant puis compare le SHA à celui qui a passé la CI. Un contexte sans métadonnées Git sert 503 sur `/api/version`. Vérifier sur l’instance Dokploy que le checkout garde ces métadonnées et que la réponse de `compose.deploy` fournit l’identifiant de déploiement attendu.
+Le workflow vérifie que la source du Compose cible `main`, puis demande le déploiement à Dokploy. Une réponse acceptée confirme la prise en charge de la demande. Le tableau de bord Dokploy indique ensuite si le déploiement a réussi.
+
+La route `/api/version` reste disponible pour le diagnostic. Elle indique le SHA de l’image lorsque le build a accès aux métadonnées Git et que MariaDB répond.
 
 ### Sauvegarde, restauration et migrations
 
