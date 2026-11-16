@@ -1,0 +1,23 @@
+meta {
+  name: GET /me/shopping-list (shopping-list)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/me/shopping-list
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Scaled quantity", () => { const data = res.getBody(); const item = data.find(item => item.name === "Feuilles de lasagne"); expect(item.amount).to.equal(6); expect(item.checked).to.equal(false); bru.setVar("planningItem", item.id); });
+  test("Five recipe ingredients", () => { const data = res.getBody(); expect(data).to.have.lengthOf(5); bru.setVar("planningItems", JSON.stringify(data.map(item => item.id))); });
+  test("Recipe provenance", () => { const item = res.getBody().find(item => item.name === "Feuilles de lasagne"); expect(item.contributions).to.deep.equal([{ recipeId: "00000000-0000-4000-8000-000000000001", recipeTitle: "Lasagnes à la bolognaise maison", amount: 6 }]); });
+  JSON.parse(bru.getVar("planningItems")).forEach((id, i) => bru.setVar("planningRemove"+i, id));
+}

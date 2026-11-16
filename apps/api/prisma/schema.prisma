@@ -8,41 +8,145 @@ datasource db {
 }
 
 model Recipe {
-  id          String   @id @default(cuid())
-  title       String   @db.VarChar(200)
-  description String?  @db.Text
-  servings    Int      @default(2)
-  prepMinutes Int      @default(0)
-  cookMinutes Int      @default(0)
-  imagePath   String?  @db.VarChar(500)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  ingredients RecipeIngredient[]
-  steps       RecipeStep[]
-}
+  id           String             @id @default(uuid()) @db.Char(36)
+  title        String             @db.VarChar(200)
+  description  String             @db.Text
+  category     String             @db.VarChar(30)
+  difficulty   String             @db.VarChar(10)
+  budget       String             @db.VarChar(20)
+  servings     Int
+  prepMinutes  Int
+  cookMinutes  Int
+  restMinutes  Int
+  totalMinutes Int
+  imagePath    String?            @db.VarChar(2048)
+  utensils     Json
+  rating       Float              @default(0)
+  reviews      Int                @default(0)
+  badge        String?            @db.VarChar(50)
+  isPublic     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  ingredients  RecipeIngredient[]
+  steps        RecipeStep[]
+  favorites    Favorite[]
+  plannedMeals PlannedMeal[]
+  notes        RecipeNote[]
 
-model Ingredient {
-  id      String @id @default(cuid())
-  name    String @unique @db.VarChar(160)
-  recipes RecipeIngredient[]
+  @@index([isPublic, category, totalMinutes])
 }
 
 model RecipeIngredient {
-  recipeId     String
-  ingredientId String
-  quantity     Decimal? @db.Decimal(10, 2)
-  unit         String?  @db.VarChar(30)
-  note         String?  @db.VarChar(255)
-  recipe       Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
-  @@id([recipeId, ingredientId])
+  recipeId String @db.Char(36)
+  position Int
+  name     String @db.VarChar(160)
+  quantity Decimal? @db.Decimal(14, 6)
+  unit     String? @db.VarChar(30)
+  icon     String @db.VarChar(20)
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([recipeId, position])
 }
 
 model RecipeStep {
-  id       String @id @default(cuid())
-  recipeId String
+  recipeId String @db.Char(36)
   position Int
   content  String @db.Text
   recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  @@unique([recipeId, position])
+
+  @@id([recipeId, position])
+}
+
+model Owner {
+  id           Int             @id
+  email        String          @unique @db.VarChar(254)
+  firstName    String          @db.VarChar(70)
+  lastName     String          @db.VarChar(70)
+  passwordHash String          @db.VarChar(180)
+  bio          String          @default("") @db.VarChar(1000)
+  newsletter   Boolean         @default(false)
+  publicRecipes Boolean        @default(true)
+  avatar       String?         @db.VarChar(255)
+  sessions     Session[]
+  favorites    Favorite[]
+  resets       PasswordReset[]
+  shoppingItems ShoppingItem[]
+  plannedMeals  PlannedMeal[]
+  recipeNotes   RecipeNote[]
+}
+
+model Session {
+  digest    String   @id @db.Char(64)
+  ownerId   Int
+  expiresAt DateTime
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, expiresAt])
+}
+
+model PasswordReset {
+  digest    String   @id @db.Char(64)
+  ownerId   Int
+  expiresAt DateTime
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, expiresAt])
+}
+
+model Favorite {
+  ownerId   Int
+  recipeId  String   @db.Char(36)
+  createdAt DateTime @default(now())
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, recipeId])
+  @@index([ownerId, createdAt])
+}
+
+model ShoppingItem {
+  id            String                 @id @default(uuid()) @db.Char(36)
+  ownerId       Int
+  name          String                 @db.VarChar(160)
+  unit          String?                @db.VarChar(30)
+  amount        Decimal?               @db.Decimal(30, 12)
+  checked       Boolean                @default(false)
+  createdAt     DateTime               @default(now())
+  owner         Owner                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  contributions ShoppingContribution[]
+
+  @@index([ownerId, createdAt])
+}
+
+model ShoppingContribution {
+  id          String       @id @default(uuid()) @db.Char(36)
+  itemId      String       @db.Char(36)
+  recipeId    String?      @db.Char(36)
+  recipeTitle String?      @db.VarChar(200)
+  amount      Decimal?     @db.Decimal(30, 12)
+  item        ShoppingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+model PlannedMeal {
+  id       String   @id @default(uuid()) @db.Char(36)
+  ownerId  Int
+  recipeId String   @db.Char(36)
+  date     DateTime @db.Date
+  servings Int
+  owner    Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, date])
+}
+
+model RecipeNote {
+  ownerId  Int
+  recipeId String @db.Char(36)
+  note     String @db.Text
+  owner    Owner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, recipeId])
 }

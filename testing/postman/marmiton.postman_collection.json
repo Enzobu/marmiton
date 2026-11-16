@@ -39,6 +39,2155 @@
           }
         }
       ]
+    },
+    {
+      "name": "catalog",
+      "item": [
+        {
+          "name": "GET /recipes?category=Desserts&limit=1&sort=time (list)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes?category=Desserts&limit=1&sort=time"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginated desserts', () => { const body = pm.response.json(); pm.expect(body.items).to.have.lengthOf(1); pm.expect(body.items[0].category).to.eql('Desserts'); pm.expect(body.total).to.be.gte(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/00000000-0000-4000-8000-000000000001 (detail)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/00000000-0000-4000-8000-000000000001"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Recipe has quantities and steps', () => { pm.expect(pm.response.json().quantities).to.have.lengthOf(5); pm.expect(pm.response.json().steps).to.have.lengthOf(3); });",
+                  "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Feuilles de lasagne\").icon).to.equal(\"grain\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes?limit=0 (invalid-query)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes?limit=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/not-a-uuid (invalid-uuid)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/not-a-uuid"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/00000000-0000-4000-8000-999999999999 (missing)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/00000000-0000-4000-8000-999999999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "POST /auth/login (bad-login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"wrong\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me (me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Owner profile\", () => pm.expect(pm.response.json().email).to.eql(\"owner@example.invalid\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/forgot-password (forgot)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"missing@example.invalid\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/forgot-password (invalid-forgot)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"invalid\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/reset-password (invalid-reset)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/reset-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\", \"password\": \"Replacement-Password43\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me (revoked)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me (guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login (authenticated-reset-login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/forgot-password (authenticated-reset-no-smtp)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"dark\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 503', () => pm.response.to.have.status(503));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/forgot-password (authenticated-reset-other-email)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"other@example.invalid\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (authenticated-reset-logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "recipes",
+      "item": [
+        {
+          "name": "POST /auth/login (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (guest-write)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (invalid-import)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 2}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (invalid-image)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true, \"photo\": \"invalid\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /recipes (create)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Created UUID\", () => { const id = pm.response.json().id; pm.expect(id).to.match(/^[a-f0-9-]{36}$/); pm.environment.set(\"recipeId\", id); });",
+                  "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Farine\").icon).to.equal(\"grain\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/recipes (owned)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/recipes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Owner has recipes\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /recipes/{{recipeId}} (edit)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipe\": {\n    \"schemaVersion\": 1,\n    \"title\": \"Recette modifi\\u00e9e\",\n    \"description\": \"Fixture HTTP\",\n    \"category\": \"Plats\",\n    \"difficulty\": \"Difficile\",\n    \"servings\": 2,\n    \"times\": {\n      \"preparation\": 5,\n      \"cooking\": 10,\n      \"rest\": 0\n    },\n    \"budget\": \"Bon march\\u00e9\",\n    \"ingredients\": [\n      {\n        \"name\": \"Cannelle moulue\",\n        \"quantity\": 25,\n        \"unit\": \"g\"\n      },\n      {\n        \"name\": \"Cuisses de canard confites\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Bouquet garni\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Graisse de canard\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Champigon\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      }\n    ],\n    \"utensils\": [\n      \"Bol\"\n    ],\n    \"steps\": [\n      \"M\\u00e9langer.\"\n    ],\n    \"imageUrl\": null\n  },\n  \"isPublic\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Edited title\", () => pm.expect(pm.response.json().title).to.eql(\"Recette modifiée\"));",
+                  "pm.test(\"Updated difficulty\", () => pm.expect(pm.response.json().difficulty).to.eql(\"Difficile\"));",
+                  "pm.test(\"Ingredient icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Cannelle moulue\").icon).to.equal(\"spice\"));",
+                  "pm.test(\"Cuisses de canard confites icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Cuisses de canard confites\").icon).to.equal(\"meat\"));",
+                  "pm.test(\"Bouquet garni icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Bouquet garni\").icon).to.equal(\"spice\"));",
+                  "pm.test(\"Graisse de canard icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Graisse de canard\").icon).to.equal(\"other\"));",
+                  "pm.test(\"Icon for a misspelled ingredient\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Champigon\").icon).to.equal(\"vegetable\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /media/00000000-0000-4000-8000-000000000000.png (missing-image)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/media/00000000-0000-4000-8000-000000000000.png"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /recipes/{{recipeId}} (delete)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/{{recipeId}} (deleted)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.environment.unset(\"recipeId\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "account",
+      "item": [
+        {
+          "name": "POST /auth/login (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/favorites (guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/favorites"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/favorites/00000000-0000-4000-8000-000000000001 (add)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/favorites/00000000-0000-4000-8000-000000000001 (add-again)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/favorites/00000000-0000-4000-8000-999999999999 (missing)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-999999999999",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/favorites (list)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/favorites",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Favorite stored once\", () => pm.expect(pm.response.json().filter(row => row.id.endsWith(\"000000000001\"))).to.have.lengthOf(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/favorites/00000000-0000-4000-8000-000000000001 (remove)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/favorites/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/profile (invalid-profile)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\": \"\", \"lastName\": \"Owner\", \"bio\": \"Profil de test HTTP\", \"newsletter\": false, \"publicRecipes\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/profile (profile)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\": \"Test\", \"lastName\": \"Owner\", \"bio\": \"Profil de test HTTP\", \"newsletter\": false, \"publicRecipes\": true, \"photo\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jCt8AAAAASUVORK5CYII=\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Profile persisted\", () => { const profile = pm.response.json(); pm.expect(profile.bio).to.eql(\"Profil de test HTTP\"); pm.expect(profile.avatar).to.match(/^\\/me\\/avatar\\//); pm.environment.set(\"avatarPath\", profile.avatar.split('/').pop()); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET {{avatarPath}} (avatar)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/avatar/{{avatarPath}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET {{avatarPath}} (avatar-guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/avatar/{{avatarPath}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/profile (clear-profile)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\": \"Test\", \"lastName\": \"Owner\", \"bio\": \"\", \"newsletter\": false, \"publicRecipes\": true, \"photo\": null}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"avatarPath\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "version",
+      "item": [
+        {
+          "name": "GET /api/version (current)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/version"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Full SHA\", () => pm.expect(pm.response.json().sha).to.match(/^[0-9a-f]{40}$/));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "planning",
+      "item": [
+        {
+          "name": "POST /auth/login (login)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@example.invalid\", \"password\": \"Fixture-Password42\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.test(\"Valid Bearer\", () => { const token = pm.response.json().accessToken; pm.expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); pm.environment.set(\"accessToken\", token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/shopping-list (courses-guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/shopping-list"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/weekly-menu?from=2031-01-06 (menu-guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/weekly-menu?from=2031-01-06"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-guest)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/shopping-list (shopping-invalid)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"meals\": []}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/shopping-list (shopping-missing-recipe)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"meals\": [{\"recipeId\": \"00000000-0000-4000-8000-999999999999\", \"servings\": 2}]}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/shopping-list (shopping-add)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"meals\": [{\"recipeId\": \"00000000-0000-4000-8000-000000000001\", \"servings\": 2}]}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/shopping-list (shopping-list)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Scaled quantity\", () => { const data = pm.response.json(); const item = data.find(item => item.name === \"Feuilles de lasagne\"); pm.expect(item.amount).to.equal(6); pm.expect(item.checked).to.equal(false); pm.collectionVariables.set(\"planningItem\", item.id); });",
+                  "pm.test(\"Five recipe ingredients\", () => { const data = pm.response.json(); pm.expect(data).to.have.lengthOf(5); pm.collectionVariables.set(\"planningItems\", JSON.stringify(data.map(item => item.id))); });",
+                  "JSON.parse(pm.collectionVariables.get(\"planningItems\")).forEach((id, i) => pm.collectionVariables.set(\"planningRemove\"+i, id));",
+                  "pm.test(\"Recipe provenance\", () => { const item = pm.response.json().find(item => item.name === \"Feuilles de lasagne\"); pm.expect(item.contributions).to.deep.equal([{ recipeId: \"00000000-0000-4000-8000-000000000001\", recipeTitle: \"Lasagnes à la bolognaise maison\", amount: 6 }]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/shopping-list/{{planningItem}} (shopping-check)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/shopping-list/{{planningItem}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"checked\": true}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/shopping-list (shopping-checked)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Checked item persisted\", () => { const data = pm.response.json(); pm.expect(data.find(item => item.id === pm.collectionVariables.get(\"planningItem\")).checked).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/shopping-list/00000000-0000-4000-8000-999999999999 (shopping-missing-item)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/shopping-list/00000000-0000-4000-8000-999999999999",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"checked\": true}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list/{{planningRemove0}} (shopping-remove-1)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list/{{planningRemove0}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list/{{planningRemove1}} (shopping-remove-2)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list/{{planningRemove1}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list/{{planningRemove2}} (shopping-remove-3)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list/{{planningRemove2}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list/{{planningRemove3}} (shopping-remove-4)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list/{{planningRemove3}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list/{{planningRemove4}} (shopping-remove-5)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list/{{planningRemove4}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/shopping-list (shopping-after-remove)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Shopping list is empty\", () => { const data = pm.response.json(); pm.expect(data).to.have.lengthOf(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/weekly-menu (menu-invalid-date)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/weekly-menu",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipeId\": \"00000000-0000-4000-8000-000000000001\", \"servings\": 6, \"date\": \"2031-02-31\"}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/weekly-menu?from=tomorrow (menu-invalid-week)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/weekly-menu?from=tomorrow",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/weekly-menu (menu-missing-recipe)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/weekly-menu",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipeId\": \"00000000-0000-4000-8000-999999999999\", \"servings\": 6, \"date\": \"2031-01-07\"}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/weekly-menu (menu-add)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/weekly-menu",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"recipeId\": \"00000000-0000-4000-8000-000000000001\", \"servings\": 6, \"date\": \"2031-01-07\"}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Plan ID\", () => { const data = pm.response.json(); pm.expect(data.id).to.match(/^[a-f0-9-]{36}$/); pm.collectionVariables.set(\"plannedMeal\", data.id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/weekly-menu?from=2031-01-06 (menu-list)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/weekly-menu?from=2031-01-06",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Meal details\", () => { const data = pm.response.json(); const meal = data.find(item => item.id === pm.collectionVariables.get(\"plannedMeal\")); pm.expect(meal.servings).to.equal(6); pm.expect(meal.date).to.equal(\"2031-01-07\"); pm.expect(meal.title).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/weekly-menu?from=2031-01-13 (menu-other-week)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/weekly-menu?from=2031-01-13",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Meal is outside the week\", () => { const data = pm.response.json(); pm.expect(data.some(item => item.id === pm.collectionVariables.get(\"plannedMeal\"))).to.equal(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/weekly-menu/{{plannedMeal}} (menu-remove)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/weekly-menu/{{plannedMeal}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/weekly-menu?from=2031-01-06 (menu-after-remove)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/weekly-menu?from=2031-01-06",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Meal is removed\", () => { const data = pm.response.json(); pm.expect(data.some(item => item.id === pm.collectionVariables.get(\"plannedMeal\"))).to.equal(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/recipe-notes/00000000-0000-4000-8000-999999999999 (notes-missing-recipe)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-999999999999",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-invalid)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"note\": 42}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-save)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"note\": \"Préparer la sauce la veille.\"}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-read)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved note\", () => { const data = pm.response.json(); pm.expect(data.note).to.equal(\"Préparer la sauce la veille.\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-clear)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"note\": \"\"}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/recipe-notes/00000000-0000-4000-8000-000000000001 (notes-empty)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/recipe-notes/00000000-0000-4000-8000-000000000001",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Empty note\", () => { const data = pm.response.json(); pm.expect(data.note).to.equal(\"\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list (shopping-clear-guest)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/shopping-list (shopping-before-clear)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"meals\": [{\"recipeId\": \"00000000-0000-4000-8000-000000000001\", \"servings\": 2}]}"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/shopping-list (shopping-clear)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/shopping-list (shopping-after-clear)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/shopping-list",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Shopping list is empty\", () => { const data = pm.response.json(); pm.expect(data).to.have.lengthOf(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout (logout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset(\"accessToken\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

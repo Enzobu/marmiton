@@ -1,0 +1,15 @@
+meta {
+  name: GET /recipes/not-a-uuid (invalid-uuid)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/recipes/not-a-uuid
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

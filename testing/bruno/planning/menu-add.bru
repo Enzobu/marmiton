@@ -1,0 +1,24 @@
+meta {
+  name: POST /me/weekly-menu (menu-add)
+  type: http
+  seq: 21
+}
+
+post {
+  url: {{baseUrl}}/me/weekly-menu
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"recipeId": "00000000-0000-4000-8000-000000000001", "servings": 6, "date": "2031-01-07"}
+}
+
+tests {
+  test("HTTP 201", () => expect(res.getStatus()).to.equal(201));
+  test("Plan ID", () => { const data = res.getBody(); expect(data.id).to.match(/^[a-f0-9-]{36}$/); bru.setVar("plannedMeal", data.id); });
+}

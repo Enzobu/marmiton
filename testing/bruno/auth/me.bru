@@ -1,0 +1,20 @@
+meta {
+  name: GET /auth/me (me)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/auth/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Owner profile", () => expect(res.getBody().email).to.equal("owner@example.invalid"));
+}

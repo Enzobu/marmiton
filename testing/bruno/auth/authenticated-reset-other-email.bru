@@ -1,0 +1,25 @@
+meta {
+  name: POST /auth/forgot-password (authenticated-reset-other-email)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/auth/forgot-password
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "email": "other@example.invalid"
+  }
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

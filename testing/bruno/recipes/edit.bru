@@ -1,0 +1,80 @@
+meta {
+  name: PUT /recipes/{{recipeId}} (edit)
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/recipes/{{recipeId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "recipe": {
+      "schemaVersion": 1,
+      "title": "Recette modifi\u00e9e",
+      "description": "Fixture HTTP",
+      "category": "Plats",
+      "difficulty": "Difficile",
+      "servings": 2,
+      "times": {
+        "preparation": 5,
+        "cooking": 10,
+        "rest": 0
+      },
+      "budget": "Bon march\u00e9",
+      "ingredients": [
+        {
+          "name": "Cannelle moulue",
+          "quantity": 25,
+          "unit": "g"
+        },
+        {
+          "name": "Cuisses de canard confites",
+          "quantity": 1,
+          "unit": ""
+        },
+        {
+          "name": "Bouquet garni",
+          "quantity": 1,
+          "unit": ""
+        },
+        {
+          "name": "Graisse de canard",
+          "quantity": 1,
+          "unit": ""
+        },
+        {
+          "name": "Champigon",
+          "quantity": 1,
+          "unit": ""
+        }
+      ],
+      "utensils": [
+        "Bol"
+      ],
+      "steps": [
+        "M\u00e9langer."
+      ],
+      "imageUrl": null
+    },
+    "isPublic": true
+  }
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Updated difficulty", () => expect(res.getBody().difficulty).to.equal("Difficile"));
+  test("Edited title", () => expect(res.getBody().title).to.equal("Recette modifiée"));
+  test("Ingredient icon", () => expect(res.getBody().quantities.find(item => item.name === "Cannelle moulue").icon).to.equal("spice"));
+  test("Cuisses de canard confites icon", () => expect(res.getBody().quantities.find(item => item.name === "Cuisses de canard confites").icon).to.equal("meat"));
+  test("Bouquet garni icon", () => expect(res.getBody().quantities.find(item => item.name === "Bouquet garni").icon).to.equal("spice"));
+  test("Graisse de canard icon", () => expect(res.getBody().quantities.find(item => item.name === "Graisse de canard").icon).to.equal("other"));
+  test("Icon for a misspelled ingredient", () => expect(res.getBody().quantities.find(item => item.name === "Champigon").icon).to.equal("vegetable"));
+}

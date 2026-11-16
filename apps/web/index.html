@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Marmiton maison</title>
+    <meta name="theme-color" content="#fffdf9" />
+    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (function () {
+        try {
+          var preference = localStorage.getItem('petitsplats.theme') || 'system';
+          var isDark = preference === 'dark' || (preference !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          if (isDark) document.getElementById('app-favicon').setAttribute('href', '/favicon-dark.svg');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#191817' : '#fffdf9');
+        } catch (error) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <meta name="description" content="Les Petits Plats, votre carnet de recettes maison." />
+    <title>Les Petits Plats — Recettes maison</title>
   </head>
   <body>
     <div id="root"></div>

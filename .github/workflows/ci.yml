@@ -29,7 +29,7 @@ jobs:
       - name: Validate Skills format and references
         run: python3 agent/scripts/validate_skills.py
       - name: Check Bash syntax
-        run: bash -n agent/scripts/dokploy_deploy.sh agent/scripts/init.sh agent/tests/test_init.sh
+        run: bash -n scripts/dokploy_deploy.sh agent/scripts/dokploy_deploy.sh agent/scripts/init.sh agent/tests/test_init.sh
       - name: Offline deployment regression tests
         run: python3 -m unittest discover -s agent/tests -p 'test_*.py' -v
       - name: Offline Skills tests
@@ -43,6 +43,20 @@ jobs:
     name: Validate Marmiton application
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: mysql://marmiton:fixture-password@127.0.0.1:3306/marmiton_test
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: marmiton_test
+          MARIADB_USER: marmiton
+          MARIADB_PASSWORD: fixture-password
+          MARIADB_ROOT_PASSWORD: isolated-ci-root-fixture
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=3s --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,10 +64,77 @@ jobs:
           node-version: "22"
       - run: npm install --no-audit --no-fund
       - run: npm run db:generate
+      - run: npm exec -w @marmiton/api -- prisma migrate deploy
+      - run: npm exec -w @marmiton/api -- prisma db seed
+      - run: npm exec -w @marmiton/api -- prisma db seed
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm test
       - run: npm run build
+      - name: Provision HTTP test account on isolated MariaDB
+        env:
+          OWNER_EMAIL: owner@example.invalid
+          OWNER_FIRST_NAME: Test
+          OWNER_LAST_NAME: Owner
+          OWNER_PASSWORD: Fixture-Password42
+        run: node apps/api/dist/create-owner.js
+      - run: npm test
+      - name: Verify Postman and Bruno collections against MariaDB
+        env:
+          TEST_REVISION: "1111111111111111111111111111111111111111"
+        run: |
+          export UPLOADS_DIRECTORY="$(mktemp -d)"
+          start_api() {
+            node --input-type=module -e 'import { buildApp } from "./apps/api/dist/app.js"; await buildApp({ revision: process.env.TEST_REVISION }).listen({ host: "127.0.0.1", port: 3001 });' &
+            server_pid=$!
+            trap 'kill "$server_pid"' EXIT
+            curl --retry 15 --retry-connrefused --retry-delay 1 --fail http://localhost:3001/health
+          }
+          start_api
+          npx --yes newman@6 run testing/postman/marmiton.postman_collection.json -e testing/postman/marmiton_local.postman_environment.json
+          kill "$server_pid"
+          wait "$server_pid" || true
+          start_api
+          (cd testing/bruno && npx --yes @usebruno/cli@2 run --env marmiton_local)
+      - name: Validate root Docker Compose
+        run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
+      - name: Build frontend and API images
+        run: |
+          mkdir -p volumes/mariadb/marmiton
+          chmod 000 volumes/mariadb/marmiton
+          trap 'chmod 700 volumes/mariadb/marmiton' EXIT
+          docker compose --env-file .env.example -f docker-compose.yml build web api
+      - name: Verify proxy, CORS and real SHA from the API image
+        run: |
+          export DB_NAME=marmiton_test DB_USER=marmiton DB_PASSWORD=fixture-password DB_ROOT_PASSWORD=isolated-ci-root-fixture
+          export DB_DATA_PATH="$(mktemp -d)" UPLOADS_PATH="$(mktemp -d)"
+          export WEB_BIND_ADDRESS=127.0.0.1 WEB_PORT=18080 API_PORT=13001
+          export CORS_ORIGIN=https://marmiton.enzo-palermo.com
+          chmod 0755 "$UPLOADS_PATH"
+          docker compose --env-file .env.example up -d
+          trap 'docker compose --env-file .env.example down' EXIT
+          direct=http://127.0.0.1:13001
+          web=http://127.0.0.1:18080
+          curl --retry 20 --retry-all-errors --retry-delay 3 --fail "$direct/api/version" | jq -e --arg sha "$GITHUB_SHA" '.sha == $sha'
+          curl --fail "$web/api/health" | jq -e '.status == "ok"'
+          curl --fail "$web/api/recipes?limit=1" | jq -e '.limit == 1 and .total == 0'
+          curl --fail -sS -D /tmp/marmiton-cors.headers -o /dev/null -X OPTIONS \
+            -H 'Origin: https://marmiton.enzo-palermo.com' -H 'Access-Control-Request-Method: PUT' \
+            -H 'Access-Control-Request-Headers: authorization,content-type' "$direct/me/profile"
+          grep -qi '^access-control-allow-origin: https://marmiton.enzo-palermo.com' /tmp/marmiton-cors.headers
+          docker compose --env-file .env.example exec -T \
+            -e OWNER_EMAIL=owner@example.invalid -e OWNER_PASSWORD=Fixture-Password42 \
+            -e OWNER_FIRST_NAME=Test -e OWNER_LAST_NAME=Owner api node dist/create-owner.js
+          token="$(curl -fsS "$direct/auth/login" -H 'Origin: https://marmiton.enzo-palermo.com' \
+            -H 'Content-Type: application/json' --data '{"email":"owner@example.invalid","password":"Fixture-Password42"}' | jq -er '.accessToken')"
+          curl -fsS "$direct/auth/me" -H 'Origin: https://marmiton.enzo-palermo.com' \
+            -H "Authorization: Bearer $token" | jq -e '.email == "owner@example.invalid"'
+          unset token
+      - name: Verify database and upload backup restoration
+        env:
+          MARIADB_CONTAINER: ${{ job.services.mariadb.id }}
+        run: bash scripts/test-restore.sh
+      - name: Verify Dokploy trigger acceptance and rejection offline
+        run: bash scripts/test-dokploy-deploy.sh
 
   ci-required:
     name: ci-required
@@ -72,3 +153,36 @@ jobs:
             echo "Required rules check did not succeed: $RULES_RESULT"
             exit 1
           }
+
+  deploy-prod:
+    name: Deploy production (Dokploy)
+    # Déploiement uniquement sur push main après CI verte ; jamais depuis dev/PR.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: ci-required
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: production
+    timeout-minutes: 20
+    concurrency:
+      group: dokploy-production-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout validated revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Preflight required configuration
+        env:
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+        run: |
+          test -n "$DOKPLOY_URL" || { echo "::error::Missing DOKPLOY_URL variable"; exit 1; }
+          test -n "$DOKPLOY_API_KEY" || { echo "::error::Missing DOKPLOY_API_KEY secret"; exit 1; }
+          test -n "$DOKPLOY_COMPOSE_ID" || { echo "::error::Missing DOKPLOY_COMPOSE_ID secret"; exit 1; }
+      - name: Request production deployment in Dokploy
+        env:
+          DOKPLOY_URL: ${{ vars.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          EXPECTED_SOURCE_REF: ${{ github.ref }}
+        run: bash scripts/dokploy_deploy.sh

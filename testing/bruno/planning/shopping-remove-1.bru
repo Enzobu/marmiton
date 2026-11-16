@@ -1,0 +1,19 @@
+meta {
+  name: DELETE /me/shopping-list/{{planningRemove0}} (shopping-remove-1)
+  type: http
+  seq: 12
+}
+
+delete {
+  url: {{baseUrl}}/me/shopping-list/{{planningRemove0}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

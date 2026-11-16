@@ -19,7 +19,7 @@ Prérequis : Node.js 22+, npm, MariaDB 11.
 Le modèle Prisma est un point de départ : aucune migration n'est créée avant la première génération locale. Les routes de recettes et l'authentification ne sont pas encore implémentées.
 
 ## Docker
-Créer les dossiers hôtes de `DB_DATA_PATH` et `UPLOADS_PATH`, avec droits adaptés aux processus conteneurisés. Renseigner `.env`, puis `docker compose -f compose.yml up --build -d`. Web : http://localhost:8080. L'API est également exposée uniquement sur loopback ; nginx relaie `/api/` vers celle-ci.
+Créer les dossiers hôtes de `DB_DATA_PATH` et `UPLOADS_PATH`, avec droits adaptés aux processus conteneurisés. Renseigner `.env`, puis `docker compose -f docker-compose.yml --profile backend up --build -d`. Web : http://localhost:8080. L'API est également exposée uniquement sur loopback ; nginx relaie `/api/` vers celle-ci.
 
 Pour un hébergement via Dokploy, adapter la publication web au reverse proxy et conserver les chemins persistants sous `/etc/dokploy_volume/marmiton/`. Aucun déploiement automatique n'est fourni.
 
@@ -32,3 +32,15 @@ Pour un hébergement via Dokploy, adapter la publication web au reverse proxy et
 
 ## Rules / Skills
 Lancer `bash agent/scripts/init.sh --profile standard` pour visualiser la configuration adaptée à la nouvelle stack, puis `--write` après examen. Les Rules et Skills canoniques sont déjà dans ce dépôt.
+
+
+## Frontend seul (phase UI)
+
+Le Compose racine unique est `docker-compose.yml`. Pour tester l'interface sans base ni API :
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml up --build -d web
+```
+
+Les ports publiés sont personnalisables avec `WEB_PORT`, `WEB_BIND_ADDRESS`, `API_PORT` et `API_BIND_ADDRESS` dans le `.env` local ou dans Dokploy. Le frontend expose le port conteneur `80`. Le backend et la base ne démarrent qu'avec le profil `backend` et une configuration complète. La CD production se déclenche automatiquement lors des futurs pushes sur `main` après réussite de la CI. Elle n'a pas encore été testée sur Dokploy.

@@ -1,0 +1,23 @@
+meta {
+  name: POST /me/weekly-menu (menu-invalid-date)
+  type: http
+  seq: 18
+}
+
+post {
+  url: {{baseUrl}}/me/weekly-menu
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {"recipeId": "00000000-0000-4000-8000-000000000001", "servings": 6, "date": "2031-02-31"}
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

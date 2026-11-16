@@ -1,0 +1,31 @@
+meta {
+  name: PUT /me/profile (profile)
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/me/profile
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "firstName": "Test",
+    "lastName": "Owner",
+    "bio": "Profil de test HTTP",
+    "newsletter": false,
+    "publicRecipes": true,
+    "photo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jCt8AAAAASUVORK5CYII="
+  }
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Profile persisted", () => { const profile = res.getBody(); expect(profile.bio).to.equal("Profil de test HTTP"); expect(profile.avatar).to.match(/^\/me\/avatar\//); bru.setVar("avatarPath", profile.avatar.split("/").pop()); });
+}

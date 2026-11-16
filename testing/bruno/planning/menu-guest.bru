@@ -1,0 +1,15 @@
+meta {
+  name: GET /me/weekly-menu?from=2031-01-06 (menu-guest)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/me/weekly-menu?from=2031-01-06
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

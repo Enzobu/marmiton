@@ -1,0 +1,15 @@
+meta {
+  name: GET /recipes?limit=0 (invalid-query)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/recipes?limit=0
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

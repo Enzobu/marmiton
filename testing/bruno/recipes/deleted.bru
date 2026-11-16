@@ -1,0 +1,16 @@
+meta {
+  name: GET /recipes/{{recipeId}} (deleted)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/recipes/{{recipeId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 404", () => expect(res.getStatus()).to.equal(404));
+  bru.deleteVar("recipeId");
+}

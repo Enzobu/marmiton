@@ -1,0 +1,19 @@
+meta {
+  name: GET {{avatarPath}} (avatar)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/me/avatar/{{avatarPath}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+}

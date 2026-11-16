@@ -1,0 +1,19 @@
+meta {
+  name: DELETE /recipes/{{recipeId}} (delete)
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/recipes/{{recipeId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 204", () => expect(res.getStatus()).to.equal(204));
+}

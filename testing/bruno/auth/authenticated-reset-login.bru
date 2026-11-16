@@ -1,0 +1,24 @@
+meta {
+  name: POST /auth/login (authenticated-reset-login)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "owner@example.invalid",
+    "password": "Fixture-Password42"
+  }
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  bru.deleteVar("accessToken");
+  test("Valid Bearer", () => { const token = res.getBody().accessToken; expect(token).to.match(/^[A-Za-z0-9_-]{43}$/); bru.setVar("accessToken", token); });
+}

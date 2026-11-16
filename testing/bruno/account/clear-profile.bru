@@ -1,0 +1,31 @@
+meta {
+  name: PUT /me/profile (clear-profile)
+  type: http
+  seq: 12
+}
+
+put {
+  url: {{baseUrl}}/me/profile
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "firstName": "Test",
+    "lastName": "Owner",
+    "bio": "",
+    "newsletter": false,
+    "publicRecipes": true,
+    "photo": null
+  }
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  bru.deleteVar("avatarPath");
+}

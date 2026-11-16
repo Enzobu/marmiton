@@ -1,0 +1,48 @@
+.planning-page{padding-block:40px;max-width:860px}
+.planning-page>p{color:var(--color-muted);margin-block:12px}
+.planning-page>a,.planning-link{color:var(--color-accent);font-weight:750}
+.planning-list{list-style:none;padding:0;margin:24px 0;background:var(--color-paper);border:1px solid var(--color-line);border-radius:12px}
+.planning-list>li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+.planning-list>li+li{border-top:1px solid var(--color-line)}
+.planning-list label{display:flex;align-items:center;gap:12px;flex:1;min-width:0;overflow-wrap:anywhere;cursor:pointer}
+.planning-list input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;accent-color:var(--color-accent)}
+.planning-list small{display:block;color:var(--color-muted);margin-top:3px}
+.planning-checked>span{text-decoration:line-through;color:var(--color-muted)}
+.planning-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
+@media print{.planning-actions{display:none}}
+.planning-day{padding:16px;margin-top:16px;border:1px solid var(--color-line);border-radius:12px;background:var(--color-paper)}
+.planning-day h2{font-size:20px}
+.planning-day p{margin-top:8px;color:var(--color-muted)}
+.planning-day .planning-list{border:0;margin:10px 0 0}
+.planning-day .planning-list>li{padding:10px 0}
+.planning-day .planning-list a{color:var(--color-ink);font-weight:750;overflow-wrap:anywhere}
+.planning-date{display:grid;gap:6px;font-size:13px;font-weight:700}
+.planning-date input{padding:10px;background:var(--color-page);color:var(--color-ink);border:1px solid var(--color-line);border-radius:8px}
+.planning-actions .planning-date~button{align-self:end}
+.planning-actions button:disabled{opacity:.55;cursor:default}
+.planning-input{margin-block:16px;max-width:600px}
+.planning-input button{justify-self:start;align-self:flex-start}
+.planning-input button:disabled{opacity:.55;cursor:default}
+.recipe-notes{margin-block:24px}
+.planning-list .planning-link{overflow-wrap:anywhere}
+@media print{.recipe-notes{display:none}}
+
+.planning-button{text-decoration:none;width:fit-content;max-width:100%}
+.planning-button svg{flex-shrink:0}
+.catalog-pantry-button{margin-top:12px}
+.cooking-launch{margin-bottom:14px}
+.cooking-resume{margin:5px 0 0;color:var(--color-muted)}
+.shopping-add{min-width:min(195px,100%);transition:background-color .2s,border-color .2s,color .2s}
+.planning-actions .detail-outline-button.shopping-add.is-added{background:#32734c;border-color:#32734c;color:#fff;opacity:1}
+.shopping-add.is-added svg{animation:shopping-check .25s ease-out}
+@keyframes shopping-check{from{opacity:0;transform:scale(.65)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){
+  .shopping-add{transition:none}
+  .shopping-add.is-added svg{animation:none}
+}
+
+.shopping-views{margin-top:24px}
+.shopping-clear{color:#9d3e32}
+.shopping-recipe-group{margin-top:24px}
+.shopping-recipe-group h2{font-size:20px;line-height:1.35}
+.shopping-recipe-group .planning-list{margin-top:10px}

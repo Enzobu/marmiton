@@ -1,0 +1,49 @@
+meta {
+  name: POST /recipes (guest-write)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/recipes
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "recipe": {
+      "schemaVersion": 1,
+      "title": "Recette HTTP temporaire",
+      "description": "Fixture HTTP",
+      "category": "Plats",
+      "difficulty": "Facile",
+      "servings": 2,
+      "times": {
+        "preparation": 5,
+        "cooking": 10,
+        "rest": 0
+      },
+      "budget": "Bon march\u00e9",
+      "ingredients": [
+        {
+          "name": "Farine",
+          "quantity": 25,
+          "unit": "g"
+        }
+      ],
+      "utensils": [
+        "Bol"
+      ],
+      "steps": [
+        "M\u00e9langer."
+      ],
+      "imageUrl": null
+    },
+    "isPublic": true
+  }
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

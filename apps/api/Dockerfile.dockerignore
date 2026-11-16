@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+**/.git/config
+**/.git/config.worktree
+**/.git/hooks
+**/.git/logs
+**/.git/objects/info/alternates
+
+# Local MariaDB and upload bind mounts
+/volumes/

@@ -1,0 +1,15 @@
+meta {
+  name: GET /recipes/00000000-0000-4000-8000-999999999999 (missing)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/recipes/00000000-0000-4000-8000-999999999999
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 404", () => expect(res.getStatus()).to.equal(404));
+}

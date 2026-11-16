@@ -1,0 +1,15 @@
+meta {
+  name: GET /me/favorites (guest)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/me/favorites
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

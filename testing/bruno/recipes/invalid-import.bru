@@ -1,0 +1,28 @@
+meta {
+  name: POST /recipes (invalid-import)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/recipes
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "recipe": {
+      "schemaVersion": 2
+    },
+    "isPublic": true
+  }
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}
