@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireSession } from './auth.js';
@@ -6,6 +6,8 @@ import { recipeResponse, recipeRelations } from './catalog.js';
 import { imageUploadBodyLimit, maxImageDataUrlLength } from './image-limits.js';
 import { imageStore, imageNamePattern, parseImage } from './images.js';
 import { inferIngredientIcon, ingredientNameKey } from './ingredient-icons.js';
+import { nutritionOverrideSchema, readNutritionOverride } from './nutrition.js';
+import type { NutritionOverride } from './nutrition-types.js';
 import { validateRecipeJson, type RecipeJson } from './recipe-json.js';
 
 const payload = z.object({
@@ -13,6 +15,7 @@ const payload = z.object({
   isPublic: z.boolean(),
   photo: z.string().max(maxImageDataUrlLength).optional(),
   keepPhoto: z.boolean().optional(),
+  nutrition: z.array(nutritionOverrideSchema.nullable()).max(60).optional(),
 }).strict();
 
 function recipeData(doc: RecipeJson, isPublic: boolean, imagePath: string | null) {
@@ -25,15 +28,42 @@ function recipeData(doc: RecipeJson, isPublic: boolean, imagePath: string | null
   };
 }
 
-function childData(doc: RecipeJson, previousIngredients: { name: string; icon: string }[] = []) {
+function childData(
+  doc: RecipeJson,
+  corrections: (NutritionOverride | null)[] | undefined,
+  previousIngredients: {
+    name: string; icon: string; unit: string | null; quantity: Prisma.Decimal | null; nutrition: Prisma.JsonValue;
+  }[] = [],
+) {
   const previousIcons = new Map(previousIngredients.filter(item => item.icon !== 'other').map(item => [ingredientNameKey(item.name), item.icon]));
   return {
-    ingredients: doc.ingredients.map((item, position) => ({
-      name: item.name.trim(), quantity: item.quantity, unit: item.unit.trim(), position,
-      icon: previousIcons.get(ingredientNameKey(item.name)) ?? inferIngredientIcon(item.name),
-    })),
+    ingredients: doc.ingredients.map((item, position) => {
+      const previous = previousIngredients[position];
+      const sameIngredient = previous && ingredientNameKey(previous.name) === ingredientNameKey(item.name) &&
+        (previous.unit ?? '') === item.unit.trim() && (previous.quantity?.toNumber() ?? null) === item.quantity;
+      const correction = corrections ? corrections[position] : sameIngredient ? readNutritionOverride(previous.nutrition) : null;
+      return {
+        name: item.name.trim(), quantity: item.quantity, unit: item.unit.trim(), position,
+        icon: previousIcons.get(ingredientNameKey(item.name)) ?? inferIngredientIcon(item.name),
+        nutrition: correction ? { foodCode: correction.foodCode, grams: correction.grams, per100g: correction.per100g } : undefined,
+      };
+    }),
     steps: doc.steps.map((content, position) => ({ content: content.trim(), position })),
   };
+}
+
+async function saveNutritionAliases(db: Prisma.TransactionClient, doc: RecipeJson, corrections?: (NutritionOverride | null)[]) {
+  const aliases = new Map<string, number>();
+  corrections?.forEach((correction, position) => {
+    if (correction?.remember && correction.foodCode) {
+      const key = ingredientNameKey(doc.ingredients[position].name);
+      if (key) aliases.set(key, correction.foodCode);
+    }
+  });
+  for (const [nameKey, foodCode] of [...aliases].sort(([left], [right]) => left.localeCompare(right))) {
+    await db.$executeRaw`INSERT INTO NutritionAlias (nameKey, foodCode) VALUES (${nameKey}, ${foodCode})
+      ON DUPLICATE KEY UPDATE foodCode = VALUES(foodCode)`;
+  }
 }
 
 export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, images: ReturnType<typeof imageStore>) {
@@ -66,20 +96,29 @@ export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, ima
         if (!input.success) return reply.code(400).send({ error: 'Invalid recipe payload' });
         const checked = validateRecipeJson(input.data.recipe);
         if (!checked.ok) return reply.code(400).send({ error: checked.error });
-        const { photo, keepPhoto, isPublic } = input.data;
+        const { photo, keepPhoto, isPublic, nutrition } = input.data;
+        if (nutrition && nutrition.length !== checked.value.ingredients.length) return reply.code(400).send({ error: 'Invalid ingredient nutrition' });
+        const foodCodes = [...new Set(nutrition?.flatMap(correction => correction?.foodCode ?? []) ?? [])];
+        if (foodCodes.length && await db.nutritionFood.count({ where: { code: { in: foodCodes } } }) !== foodCodes.length) {
+          return reply.code(400).send({ error: 'Unknown nutrition food' });
+        }
         const image = photo ? parseImage(photo) : null;
         if (photo && !image) return reply.code(400).send({ error: 'Invalid image' });
         const imagePath = image ? await images.put(image) : checked.value.imageUrl;
         const doc = checked.value;
         try {
           if (!id) {
-            const children = childData(doc);
-            const recipe = await db.recipe.create({
-              data: {
-                ...recipeData(doc, isPublic, imagePath),
-                ingredients: { create: children.ingredients }, steps: { create: children.steps },
-              },
-              include: recipeRelations,
+            const children = childData(doc, nutrition);
+            const recipe = await db.$transaction(async tx => {
+              const created = await tx.recipe.create({
+                data: {
+                  ...recipeData(doc, isPublic, imagePath),
+                  ingredients: { create: children.ingredients }, steps: { create: children.steps },
+                },
+                include: recipeRelations,
+              });
+              await saveNutritionAliases(tx, doc, nutrition);
+              return created;
             });
             return reply.code(201).send(recipeResponse(recipe));
           }
@@ -89,9 +128,9 @@ export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, ima
             if (!previous) return null;
             const nextImage = keepPhoto && !image ? previous.imagePath : imagePath;
             const previousIngredients = await tx.recipeIngredient.findMany({
-              where: { recipeId: id }, select: { name: true, icon: true }, orderBy: { position: 'asc' },
+              where: { recipeId: id }, select: { name: true, icon: true, unit: true, quantity: true, nutrition: true }, orderBy: { position: 'asc' },
             });
-            const children = childData(doc, previousIngredients);
+            const children = childData(doc, nutrition, previousIngredients);
             await tx.recipeIngredient.deleteMany({ where: { recipeId: id } });
             await tx.recipeStep.deleteMany({ where: { recipeId: id } });
             const recipe = await tx.recipe.update({
@@ -102,6 +141,7 @@ export function registerRecipeWrites(app: FastifyInstance, db: PrismaClient, ima
               },
               include: recipeRelations,
             });
+            await saveNutritionAliases(tx, doc, nutrition);
             return { recipe, obsolete: previous.imagePath === nextImage ? null : previous.imagePath };
           });
           if (!changed) {

@@ -43,6 +43,7 @@ model RecipeIngredient {
   quantity Decimal? @db.Decimal(14, 6)
   unit     String? @db.VarChar(30)
   icon     String @db.VarChar(20)
+  nutrition Json?
   recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@id([recipeId, position])
@@ -149,4 +150,21 @@ model RecipeNote {
   recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@id([ownerId, recipeId])
+}
+
+model NutritionFood {
+  code    Int    @id
+  name    String @db.VarChar(255)
+  nameKey String @db.VarChar(255)
+  kcal    Float?
+  protein Float?
+  carbs   Float?
+  fat     Float?
+
+  @@index([nameKey])
+}
+
+model NutritionAlias {
+  nameKey  String @id @db.VarChar(191)
+  foodCode Int
 }

@@ -11,6 +11,8 @@ import { ConfirmDialog } from './UiFeedback';
 import { BASE_SERVINGS, formatQuantity, formatTime, ingredientBaseServings, ingredientsForRecipe, recipePreparation, type Ingredient, type Recipe } from './recipe-data';
 import { ToggleSwitch } from './ToggleSwitch';
 import { ImagePicker } from './ImagePicker';
+import { IngredientNutritionEditor, RecipeNutrition } from './RecipeNutrition';
+import type { NutritionOverride } from '../../api/src/nutrition-types.ts';
 import './recipe-pages.css';
 
 import { useAuthenticatedImage } from './useAuthenticatedImage';
@@ -87,6 +89,7 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
       <div className="detail-intro"><div><span className="section-kicker">{recipe.category}</span><h1>{recipe.title}</h1><p>{recipe.description}</p><div className="detail-rating"><Glyph name="star" size={17}/><strong>{recipe.rating.toFixed(1).replace('.', ',')} / 5</strong><span>· {recipe.reviews} avis{recipe.reviews > 0 ? ' (données d’exemple)' : ''}</span></div></div><div className="detail-actions"><button className={`detail-outline-button ${favorite ? 'is-favorite' : ''}`} onClick={() => toggleFavorite(recipe.id)} aria-pressed={favorite}><Glyph name="heart"/>{favorite ? 'Dans mes favoris' : 'Sauvegarder'}</button><button className="detail-icon-button" onClick={() => window.print()} aria-label="Imprimer la recette" title="Imprimer"><Glyph name="print"/></button></div></div>
       <div className="detail-photo">{image && <img src={image} alt={recipe.title}/>}<div className="detail-photo-note">Photo de la recette</div></div>
       <div className="detail-stats" aria-label="Informations de la recette"><div><Glyph name="clock" size={22}/><span>Préparation</span><strong>{metadata.prep ? formatTime(metadata.prep) : '—'}</strong></div><div><Glyph name="clock" size={22}/><span>Cuisson</span><strong>{metadata.cook ? formatTime(metadata.cook) : '—'}</strong></div><div><Glyph name="clock" size={22}/><span>Repos</span><strong>{metadata.rest ? formatTime(metadata.rest) : '—'}</strong></div><div><Glyph name="chef" size={23}/><span>Difficulté</span><strong>{recipe.difficulty}</strong></div><div><Glyph name="wallet" size={22}/><span>Budget</span><strong>{metadata.budget}</strong></div></div>
+      {recipe.nutrition && <RecipeNutrition summary={recipe.nutrition} servings={servings}/>}
       <div className="detail-columns">
         <aside className="ingredients-panel"><div className="panel-heading"><div><span className="section-kicker">Avant de commencer</span><h2>Ingrédients</h2></div><span className="panel-count">{ingredients.length} ingrédients</span></div>
           <div className="servings-control"><div><Glyph name="people" size={20}/><span>Nombre de portions</span></div><div className="servings-stepper"><button type="button" onClick={() => setServings(current => Math.max(1, current - 1))} disabled={servings <= 1} aria-label="Diminuer le nombre de personnes"><Glyph name="minus" size={17}/></button><output aria-live="polite">{servings}</output><button type="button" onClick={() => setServings(current => Math.min(12, current + 1))} disabled={servings >= 12} aria-label="Augmenter le nombre de personnes"><Glyph name="plus" size={17}/></button></div></div>
@@ -127,11 +130,11 @@ export function RecipeDetail({ recipe, navigate, favorite, toggleFavorite, token
   </main>;
 }
 
-type DraftIngredient = { id: number; name: string; amount: string; unit: string };
+type DraftIngredient = RecipeDraft['items'][number];
 type DraftStep = { id: number; value: string };
 const demoImage = 'https://images.unsplash.com/photo-1547592180-85f173990554?w=900&q=85';
 
-export type RecipeSubmission = { recipe: RecipeJson; isPublic: boolean; photo?: string; keepPhoto?: boolean };
+export type RecipeSubmission = { recipe: RecipeJson; isPublic: boolean; photo?: string; keepPhoto?: boolean; nutrition?: (NutritionOverride | null)[] };
 
 export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode = false, token, defaultPublic }: {
   navigate: Navigate;
@@ -162,7 +165,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
   const [cook, setCook] = useState(initialMeta?.cook ?? 30);
   const [servings, setServings] = useState(initialMeta?.servings ?? initialRecipe?.servings ?? 4);
   const [image, setImage] = useState(initialRecipe?.image ?? '');
-  const [items, setItems] = useState<DraftIngredient[]>(() => initialRecipe ? (initialRecipe.quantities ?? []).map((item, index) => ({ id: index + 1, name: item.name, amount: item.amount === null ? '' : String(item.amount), unit: item.unit ?? '' })) : [{ id: 1, name: '', amount: '', unit: 'g' }]);
+  const [items, setItems] = useState<DraftIngredient[]>(() => initialRecipe ? (initialRecipe.quantities ?? []).map((item, index) => ({ id: index + 1, name: item.name, amount: item.amount === null ? '' : String(item.amount), unit: item.unit ?? '', nutrition: item.nutrition ?? undefined })) : [{ id: 1, name: '', amount: '', unit: 'g' }]);
   const [steps, setSteps] = useState<DraftStep[]>(() => initialRecipe ? initialRecipe.steps.map((value,index) => ({ id: index+100, value })) : [{ id: 100, value: '' }]);
   const [error, setError] = useState('');
   const [counter, setCounter] = useState(1000);
@@ -234,7 +237,15 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
   };
   const addIngredient = () => { setItems(value => [...value, { id: counter, name: '', amount: '', unit: 'g' }]); setCounter(value => value + 1); };
   const addStep = () => { setSteps(value => [...value, { id: counter, value: '' }]); setCounter(value => value + 1); };
-  const updateIngredient = (id: number, field: 'name' | 'amount' | 'unit', value: string) => setItems(current => current.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const updateIngredient = (id: number, field: 'name' | 'amount' | 'unit', value: string) => {
+    setItems(current => current.map(item => {
+      if (item.id !== id || item[field] === value) return item;
+      const nutrition = field === 'name' || !item.nutrition
+        ? undefined
+        : { ...item.nutrition, grams: undefined };
+      return { ...item, [field]: value, nutrition: nutrition && Object.values(nutrition).some(field => field !== undefined) ? nutrition : undefined };
+    }));
+  };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (saving) return;
@@ -244,7 +255,7 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
     setSaving(true);
     try {
       const saved = await onCreate({
-        recipe: checked.value, isPublic,
+        recipe: checked.value, isPublic, nutrition: items.map(item => item.nutrition ?? null),
         photo: image.startsWith('data:') ? image : undefined,
         keepPhoto: Boolean(initialRecipe?.image && initialRecipe.image === image),
       }, initialRecipe?.id);
@@ -260,7 +271,10 @@ export function RecipeCreate({ navigate, onCreate, initialRecipe, developerMode 
     {draftMessage && <p className="draft-message" role="status">{draftMessage}</p>}
     <form onSubmit={submit} className="create-layout"><div className="create-form-main"><section className="create-card"><div className="create-card-title"><span>01</span><div><h2>Les informations essentielles</h2><p>Renseignez le nom, la description et la catégorie.</p></div></div><div className="form-grid"><label className="form-field form-full">Nom de la recette *<input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. Gratin de légumes"/></label><label className="form-field form-full">Description *<textarea required rows={4} maxLength={600} value={description} onChange={event => setDescription(event.target.value)} placeholder="Présentation de la recette"/></label><SelectField className="form-field" label="Catégorie" value={category} onChange={value => setCategory(value)} options={[{ value: "Plats", label: "Plats" }, { value: "Entrées", label: "Entrées" }, { value: "Desserts", label: "Desserts" }, { value: "Petit-déjeuner", label: "Petit-déjeuner" }]}/><SelectField className="form-field" label="Difficulté" value={difficulty} onChange={setDifficulty} options={RECIPE_DIFFICULTIES.map(value => ({ value, label: value }))}/><label className="form-field form-full">URL de photo (facultatif)<input type="url" value={image.startsWith('data:') ? '' : image} onChange={event => setImage(event.target.value)} placeholder="https://exemple.com/ma-recette.jpg"/></label><div className="form-full"><ImagePicker label="Importer une photo" hasImage={Boolean(image.trim())} onChange={onPhoto} onRemove={() => setImage('')}/></div>{photoError && <p className="form-error" role="alert">{photoError}</p>}</div></section>
       <section className="create-card"><div className="create-card-title"><span>02</span><div><h2>Temps et portions</h2><p>Indiquez les durées en minutes.</p></div></div><div className="form-grid form-triple"><label className="form-field">Préparation (min)<input type="number" min="0" max="1440" value={prep} onChange={event => setPrep(Math.max(0, Number(event.target.value) || 0))}/></label><label className="form-field">Cuisson (min)<input type="number" min="0" max="1440" value={cook} onChange={event => setCook(Math.max(0, Number(event.target.value) || 0))}/></label><label className="form-field">Personnes<input type="number" min="1" max="12" value={servings} onChange={event => setServings(Math.max(1, Math.min(12, Number(event.target.value) || 1)))}/></label><label className="form-field">Repos (min)<input type="number" min="0" max="1440" value={rest} onChange={event => setRest(Math.max(0, Number(event.target.value) || 0))}/></label><SelectField className="form-field" label="Budget" value={budget} onChange={value => setBudget(value)} options={[{ value: "Bon marché", label: "Bon marché" }, { value: "Moyen", label: "Moyen" }, { value: "Assez cher", label: "Assez cher" }]}/></div></section>
-      <section className="create-card"><div className="create-card-title"><span>03</span><div><h2>Les ingrédients</h2><p>Les quantités sont indiquées pour {servings} personne{servings > 1 ? 's' : ''}.</p></div></div><div className="draft-list">{items.map((item, index) => <div key={item.id} className="draft-ingredient"><label className="form-field">Ingrédient {index + 1}<input required value={item.name} onChange={event => updateIngredient(item.id, 'name', event.target.value)} placeholder="Farine, tomate..."/></label><label className="form-field">Quantité<input type="number" min="0" step="any" value={item.amount} onChange={event => updateIngredient(item.id, 'amount', event.target.value)} placeholder="150"/></label><SelectField className="form-field" label="Unité" value={item.unit} onChange={value => updateIngredient(item.id, 'unit', value)} options={[{ value: "g", label: "g" }, { value: "kg", label: "kg" }, { value: "ml", label: "ml" }, { value: "l", label: "l" }, { value: "", label: "pièce(s)" }, { value: "c. à soupe", label: "c. à soupe" }, { value: "c. à café", label: "c. à café" }]}/><button type="button" className="draft-remove" disabled={items.length === 1} onClick={() => setItems(current => current.filter(row => row.id !== item.id))} aria-label={`Supprimer l'ingrédient ${index + 1}`}><Glyph name="trash" size={18}/></button></div>)}</div><button type="button" className="add-row-button" onClick={addIngredient}><Glyph name="plus" size={18}/>Ajouter un ingrédient</button></section>
+      <section className="create-card"><div className="create-card-title"><span>03</span><div><h2>Les ingrédients</h2><p>Les quantités sont indiquées pour {servings} personne{servings > 1 ? 's' : ''}.</p></div></div><div className="draft-list">{items.map((item, index) => <div key={item.id}><div className="draft-ingredient"><label className="form-field">Ingrédient {index + 1}<input required value={item.name} onChange={event => updateIngredient(item.id, 'name', event.target.value)} placeholder="Farine, tomate..."/></label><label className="form-field">Quantité<input type="number" min="0" step="any" value={item.amount} onChange={event => updateIngredient(item.id, 'amount', event.target.value)} placeholder="150"/></label><SelectField className="form-field" label="Unité" value={item.unit} onChange={value => updateIngredient(item.id, 'unit', value)} options={[{ value: "g", label: "g" }, { value: "kg", label: "kg" }, { value: "ml", label: "ml" }, { value: "l", label: "l" }, { value: "", label: "pièce(s)" }, { value: "c. à soupe", label: "c. à soupe" }, { value: "c. à café", label: "c. à café" }]}/><button type="button" className="draft-remove" disabled={items.length === 1} onClick={() => setItems(current => current.filter(row => row.id !== item.id))} aria-label={`Supprimer l'ingrédient ${index + 1}`}><Glyph name="trash" size={18}/></button></div>
+        <IngredientNutritionEditor key={item.name} name={item.name} amount={item.amount} unit={item.unit} value={item.nutrition}
+          token={token} onChange={nutrition => setItems(current => current.map(row => row.id === item.id ? { ...row, nutrition } : row))}/>
+      </div>)}</div><button type="button" className="add-row-button" onClick={addIngredient}><Glyph name="plus" size={18}/>Ajouter un ingrédient</button></section>
       <section className="create-card"><div className="create-card-title"><span>04</span><div><h2>Les étapes de préparation</h2><p>Ajoutez les étapes dans l’ordre de préparation.</p></div></div><div className="draft-list">{steps.map((step,index) => <div className="draft-step" key={step.id}><span className="draft-step-index">{String(index+1).padStart(2,'0')}</span><label className="form-field"><span className="sr-only">Étape {index + 1}</span><textarea required rows={3} value={step.value} onChange={event => setSteps(current => current.map(item => item.id === step.id ? {...item,value:event.target.value} : item))} placeholder="Description de l’étape"/></label><button type="button" className="draft-remove" disabled={steps.length === 1} onClick={() => setSteps(current => current.filter(item => item.id !== step.id))} aria-label={`Supprimer l'étape ${index + 1}`}><Glyph name="trash" size={18}/></button></div>)}</div><button type="button" className="add-row-button" onClick={addStep}><Glyph name="plus" size={18}/>Ajouter une étape</button></section>
       <section className="create-card"><div className="create-card-title"><span>05</span><div><h2>Ustensiles</h2><p>Le matériel à prévoir pour cette recette.</p></div></div><div className="utensil-entry"><label className="form-field">Ajouter un ustensile<input value={utensilInput} onChange={event => setUtensilInput(event.target.value)} maxLength={70} placeholder="Ex. Fouet, four, casserole..." onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addUtensil(); } }}/></label><button type="button" className="add-row-button" onClick={addUtensil} disabled={!utensilInput.trim() || utensils.length >= 20}><Glyph name="plus" size={18}/>Ajouter</button></div><ul className="utensil-chip-list">{utensils.map(item => <li key={item}>{item}<button type="button" onClick={() => setUtensils(current => current.filter(value => value !== item))} aria-label={`Retirer ${item}`}>×</button></li>)}</ul></section>
       {error && <p className="form-error" role="alert">{error}</p>}

@@ -1,7 +1,7 @@
 meta {
   name: PUT /recipes/{{recipeId}} (edit)
   type: http
-  seq: 7
+  seq: 10
 }
 
 put {
@@ -64,7 +64,8 @@ body:json {
       ],
       "imageUrl": null
     },
-    "isPublic": true
+    "isPublic": true,
+    "nutrition": [{"grams": 100, "per100g": {"kcal": 120, "protein": 10, "carbs": 15, "fat": 2}}, null, null, null, null]
   }
 }
 

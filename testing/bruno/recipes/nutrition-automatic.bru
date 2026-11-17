@@ -1,0 +1,16 @@
+meta {
+  name: GET /recipes/{{recipeId}} (nutrition-automatic)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/recipes/{{recipeId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Imported recipe uses Ciqual", () => { expect(res.getBody().nutrition.total.kcal).to.be.greaterThan(0); expect(res.getBody().nutrition.perPortion.kcal).to.equal(res.getBody().nutrition.total.kcal / 2); expect(res.getBody().nutrition.source).to.include("Ciqual 2025"); });
+}

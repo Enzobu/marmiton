@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireSession } from './auth.js';
 import { inferIngredientIcon } from './ingredient-icons.js';
+import { readNutritionOverride, recipeNutrition } from './nutrition.js';
 import { RECIPE_DIFFICULTIES } from './recipe-json.js';
 
 const querySchema = z.object({
@@ -40,6 +41,7 @@ export function recipeResponse(recipe: Prisma.RecipeGetPayload<{ include: typeof
     quantities: recipe.ingredients.map(item => ({
       name: item.name, amount: item.quantity?.toNumber() ?? null, unit: item.unit,
       icon: item.icon === 'other' ? inferIngredientIcon(item.name) : item.icon,
+      nutrition: readNutritionOverride(item.nutrition),
     })),
     preparation: {
       prep: recipe.prepMinutes, cook: recipe.cookMinutes, rest: recipe.restMinutes,
@@ -79,9 +81,9 @@ export function registerCatalog(app: FastifyInstance, db: PrismaClient) {
     if (!recipe && request.headers.authorization) {
       if (!await requireSession(request, reply, db)) return;
       const owned = await db.recipe.findUnique({ where: { id: id.data }, include: recipeRelations });
-      if (owned) return recipeResponse(owned);
+      if (owned) return { ...recipeResponse(owned), nutrition: await recipeNutrition(db, owned.ingredients, owned.servings) };
     }
     if (!recipe) return reply.code(404).send({ error: 'Recipe not found' });
-    return recipeResponse(recipe);
+    return { ...recipeResponse(recipe), nutrition: await recipeNutrition(db, recipe.ingredients, recipe.servings) };
   });
 }
