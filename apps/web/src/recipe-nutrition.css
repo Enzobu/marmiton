@@ -1,0 +1,22 @@
+.nutrition-panel{margin:0 0 24px;padding:20px;border:1px solid var(--color-line);border-radius:12px;background:var(--color-paper);color:var(--color-ink)}
+.nutrition-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nutrition-heading h2{margin:0;font:600 22px 'Playfair Display',Georgia,serif}
+.nutrition-values{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}
+.nutrition-values>div{padding:10px 12px;border-radius:8px;background:var(--color-soft)}
+.nutrition-values dt,.nutrition-panel small{font-size:12px;color:var(--color-muted)}
+.nutrition-values dd{margin:4px 0 0;font-size:15px;font-weight:750}
+.nutrition-missing{margin:8px 0;color:var(--color-ink);font-size:13px}
+.nutrition-missing summary,.ingredient-nutrition summary{cursor:pointer;width:fit-content;font-weight:750}
+.nutrition-missing ul{padding-inline-start:20px}
+.ingredient-nutrition{margin-top:8px;font-size:12px;color:var(--color-ink)}
+.ingredient-nutrition summary span,.nutrition-controls p,.nutrition-controls small,.nutrition-editor-actions span{color:var(--color-muted)}
+.nutrition-controls{display:grid;gap:12px;margin-top:8px;padding:12px;border:1px solid var(--color-line);border-radius:8px;background:var(--color-paper)}
+.nutrition-controls>.detail-outline-button{justify-self:start}
+.nutrition-control-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+.nutrition-results{list-style:none;margin:8px 0;padding:0;border:1px solid var(--color-line);border-radius:7px;max-height:180px;overflow:auto}
+.nutrition-results button{width:100%;padding:8px 10px;text-align:left;border:0;border-bottom:1px solid var(--color-line);color:var(--color-ink);background:var(--color-paper)}
+.nutrition-results li:last-child button{border-bottom:0}
+.nutrition-results button:hover,.nutrition-results button[aria-pressed=true]{background:var(--color-soft)}
+.nutrition-editor-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.nutrition-remember{display:flex;align-items:center;gap:6px;margin-top:8px}
+@media(max-width:480px){.nutrition-values{grid-template-columns:repeat(2,minmax(0,1fr))}}

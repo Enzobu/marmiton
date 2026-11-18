@@ -30,6 +30,22 @@
 .preparation-panel{padding:9px 0}.preparation-lead{color:var(--color-muted);font-size:14px;margin:14px 0 29px}
 .preparation-progress{background:#fff9f2;border:1px solid #f4e6da;padding:17px 19px;border-radius:9px;font-size:12px;color:#76695d}.preparation-progress strong{color:var(--color-accent);font-size:14px}.progress-track{height:6px;border-radius:99px;background:#eddfcf;margin-top:12px;overflow:hidden}.progress-track>span{display:block;height:100%;background:var(--color-accent);border-radius:99px;transition:width .2s}
 .step-list{list-style:none;padding:0;margin:14px 0 0}.step-list li{display:flex;gap:23px;padding:30px 0;border-bottom:1px solid var(--color-line)}.step-number{flex-shrink:0;width:48px;height:48px;border-radius:50%;background:var(--color-soft);border:1px solid #f7dece;color:var(--color-accent);font-size:16px;font-weight:850;display:grid;place-items:center}.step-number:hover{border-color:var(--color-accent)}.step-done .step-number{background:#e4efdf;color:var(--color-green);border-color:#c5dec1}.step-done p{text-decoration:line-through;opacity:.5}.step-list h3{font-size:14px;margin:4px 0 11px}.step-list p{font-size:14px;line-height:1.9;color:#73695e;margin:0}
+@media (prefers-reduced-motion: no-preference) {
+  .step-number {
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
+
+  .step-done .step-number svg path {
+    stroke-dasharray: 1;
+    animation: draw-step-check 240ms ease-out;
+  }
+}
+
+@keyframes draw-step-check {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
 .detail-tip{display:flex;gap:14px;align-items:center;margin-top:28px;padding:20px 22px;background:#f1f5e9;border-radius:10px}.tip-icon{background:#e1ebd8;color:var(--color-green);width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}.detail-tip strong{font-size:13px;color:var(--color-green)}.detail-tip p{margin:5px 0 0;font-size:12px;color:#698066;line-height:1.6}
 .detail-bottom-nav{margin:40px 0 0}.detail-bottom-nav a{display:inline-flex;align-items:center;gap:9px;text-decoration:none;font-size:13px;font-weight:750;color:var(--color-accent)}.detail-bottom-nav a:hover{text-decoration:underline}
 .catalog-intro{background:var(--color-hero);padding:52px max(26px,calc((100vw - 1200px)/2))}.catalog-intro p{max-width:630px;color:#71665a;line-height:1.7;font-size:14px}.catalog-intro h1{margin-bottom:10px}.catalog-search{margin-top:24px;max-width:590px}.catalog-recipes{padding-top:51px}

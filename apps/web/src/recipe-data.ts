@@ -1,3 +1,4 @@
+import type { NutritionOverride, NutritionSummary } from '../../api/src/nutrition-types.ts';
 import type { RecipeDifficulty } from './recipe-json';
 
 export type Recipe = {
@@ -15,6 +16,7 @@ export type Recipe = {
   badge?: string;
   servings?: number;
   quantities?: Ingredient[];
+  nutrition?: NutritionSummary;
   preparation?: Preparation;
   isPublic?: boolean;
   privateImage?: boolean;
@@ -32,7 +34,7 @@ export const recipes: Recipe[] = [
 ];
 
 
-export type Ingredient = { name: string; amount: number | null; unit?: string; icon: 'vegetable' | 'meat' | 'dairy' | 'grain' | 'spice' | 'other' };
+export type Ingredient = { name: string; amount: number | null; unit?: string; nutrition?: NutritionOverride | null; icon: 'vegetable' | 'meat' | 'dairy' | 'grain' | 'spice' | 'other' };
 export const BASE_SERVINGS = 4;
 export const ingredientQuantities: Record<string | number, Ingredient[]> = {
   1: [

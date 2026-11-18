@@ -18,7 +18,7 @@ new Function('require', 'exports', outputText)(loadModule, component.exports);
 const { ThemeToggle } = component.exports;
 
 test('The navbar uses a single theme control available to guests and members', () => {
-  const controls = [...app.matchAll(/<ThemeToggle value=\{themePreference\} onChange=\{updateThemePreference\}\/>/g)];
+  const controls = [...app.matchAll(/<ThemeToggle value=\{themePreference\} onChange=\{updateThemePreference\} disabled=\{preferencesPending\}\/>/g)];
   assert.equal(controls.length, 1);
   assert.ok(controls[0].index < app.indexOf('{profile ? <div className="profile-menu-wrap"'));
 });

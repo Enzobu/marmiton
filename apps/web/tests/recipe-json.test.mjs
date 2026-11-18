@@ -40,7 +40,7 @@ test('UI exposes import-export actions and remembers developer switch', () => {
   assert.match(modal, /onImport\(result.value\)/);
   assert.match(editor, /setTitle\(document.title\)/);
   assert.match(account, /Mode développeur/);
-  assert.match(root, /localStorage\.setItem\('petitsplats.developerMode'/);
+  assert.match(root, /savePreferences\(\{ developerMode: enabled \}\)/);
 });
 
 test('Difficult recipes are accepted in JSON imports', () => {

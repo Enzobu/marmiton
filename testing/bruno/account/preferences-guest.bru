@@ -1,0 +1,21 @@
+meta {
+  name: PATCH /me/preferences (preferences-guest)
+  type: http
+  seq: 13
+}
+
+patch {
+  url: {{baseUrl}}/me/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "theme": "dark"
+  }
+}
+
+tests {
+  test("HTTP 401", () => expect(res.getStatus()).to.equal(401));
+}

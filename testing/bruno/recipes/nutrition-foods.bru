@@ -1,0 +1,20 @@
+meta {
+  name: GET /nutrition/foods (nutrition-foods)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/nutrition/foods?q=oeuf%20cru&ingredient=oeufs
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Ciqual suggests the whole hen egg", () => { expect(res.getBody().match.code).to.equal(22000); expect(res.getBody().results.some(food => food.code === 22000)).to.equal(true); });
+}

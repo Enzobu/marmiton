@@ -703,6 +703,74 @@
           ]
         },
         {
+          "name": "GET /nutrition/foods (nutrition-foods)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/nutrition/foods?q=oeuf%20cru&ingredient=oeufs",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Ciqual suggests the whole hen egg\", () => { pm.expect(pm.response.json().match.code).to.equal(22000); pm.expect(pm.response.json().results.some(food => food.code === 22000)).to.equal(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /nutrition/foods (nutrition-invalid-search)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/nutrition/foods?selected=0",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/{{recipeId}} (nutrition-automatic)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Imported recipe uses Ciqual\", () => { pm.expect(pm.response.json().nutrition.total.kcal).to.be.greaterThan(0); pm.expect(pm.response.json().nutrition.perPortion.kcal).to.equal(pm.response.json().nutrition.total.kcal / 2); pm.expect(pm.response.json().nutrition.source).to.include(\"Ciqual 2025\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "PUT /recipes/{{recipeId}} (edit)",
           "request": {
             "method": "PUT",
@@ -719,7 +787,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"recipe\": {\n    \"schemaVersion\": 1,\n    \"title\": \"Recette modifi\\u00e9e\",\n    \"description\": \"Fixture HTTP\",\n    \"category\": \"Plats\",\n    \"difficulty\": \"Difficile\",\n    \"servings\": 2,\n    \"times\": {\n      \"preparation\": 5,\n      \"cooking\": 10,\n      \"rest\": 0\n    },\n    \"budget\": \"Bon march\\u00e9\",\n    \"ingredients\": [\n      {\n        \"name\": \"Cannelle moulue\",\n        \"quantity\": 25,\n        \"unit\": \"g\"\n      },\n      {\n        \"name\": \"Cuisses de canard confites\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Bouquet garni\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Graisse de canard\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Champigon\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      }\n    ],\n    \"utensils\": [\n      \"Bol\"\n    ],\n    \"steps\": [\n      \"M\\u00e9langer.\"\n    ],\n    \"imageUrl\": null\n  },\n  \"isPublic\": true\n}"
+              "raw": "{\n  \"recipe\": {\n    \"schemaVersion\": 1,\n    \"title\": \"Recette modifi\\u00e9e\",\n    \"description\": \"Fixture HTTP\",\n    \"category\": \"Plats\",\n    \"difficulty\": \"Difficile\",\n    \"servings\": 2,\n    \"times\": {\n      \"preparation\": 5,\n      \"cooking\": 10,\n      \"rest\": 0\n    },\n    \"budget\": \"Bon march\\u00e9\",\n    \"ingredients\": [\n      {\n        \"name\": \"Cannelle moulue\",\n        \"quantity\": 25,\n        \"unit\": \"g\"\n      },\n      {\n        \"name\": \"Cuisses de canard confites\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Bouquet garni\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Graisse de canard\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      },\n      {\n        \"name\": \"Champigon\",\n        \"quantity\": 1,\n        \"unit\": \"\"\n      }\n    ],\n    \"utensils\": [\n      \"Bol\"\n    ],\n    \"steps\": [\n      \"M\\u00e9langer.\"\n    ],\n    \"imageUrl\": null\n  },\n  \"isPublic\": true,\n  \"nutrition\": [{\"grams\": 100, \"per100g\": {\"kcal\": 120, \"protein\": 10, \"carbs\": 15, \"fat\": 2}}, null, null, null, null]\n}"
             }
           },
           "event": [
@@ -736,6 +804,43 @@
                   "pm.test(\"Bouquet garni icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Bouquet garni\").icon).to.equal(\"spice\"));",
                   "pm.test(\"Graisse de canard icon\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Graisse de canard\").icon).to.equal(\"other\"));",
                   "pm.test(\"Icon for a misspelled ingredient\", () => pm.expect(pm.response.json().quantities.find(item => item.name === \"Champigon\").icon).to.equal(\"vegetable\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recipes/{{recipeId}} (nutrition-corrected)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recipes/{{recipeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Manual correction persists and produces partial nutrition\", () => { pm.expect(pm.response.json().quantities[0].nutrition.grams).to.equal(100); pm.expect(pm.response.json().nutrition.perPortion).to.deep.equal({kcal:60,protein:5,carbs:7.5,fat:1}); pm.expect(pm.response.json().nutrition.missing).to.have.lengthOf(4); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /nutrition/foods (nutrition-guest-search)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/nutrition/foods?q=oeuf"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
                 ]
               }
             }
@@ -1181,6 +1286,190 @@
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
                   "pm.environment.unset(\"avatarPath\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-guest)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"dark\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-invalid)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"sepia\", \"developerMode\": \"true\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"dark\", \"developerMode\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"dark\"); pm.expect(body.developerMode).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-stale)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"light\", \"developerMode\": false, \"initialize\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"dark\"); pm.expect(body.developerMode).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me (preferences-current)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"dark\"); pm.expect(body.developerMode).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-default)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"system\", \"developerMode\": false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"system\"); pm.expect(body.developerMode).to.eql(false); });"
                 ]
               }
             }
