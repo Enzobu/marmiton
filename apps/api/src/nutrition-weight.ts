@@ -11,7 +11,7 @@ const pieceWeights = new Map([
   ['oeuf de poule', 50], ['oeufs de poule', 50],
   ['oignon', 100], ['oignons', 100], ['oignon rouge', 100], ['oignons rouges', 100],
   ['oignon jaune', 100], ['oignons jaunes', 100],
-  ['carotte', 70], ['carottes', 70],
+  ['carotte', 70], ['carottes', 70], ['citron', 60], ['citrons', 60],
   ['gros oignon', 150], ['gros oignons', 150],
   ['gousse d ail', 3], ['gousses d ail', 3], ['tete d ail', 30], ['tetes d ail', 30],
   ['cube de bouillon de boeuf', 10], ['cubes de bouillon de boeuf', 10],
@@ -29,6 +29,9 @@ export function ingredientWeight(name: string, quantity: number | null, unit: st
   if (['', 'piece', 'pieces', 'piece s'].includes(unitKey)) {
     const grams = pieceWeights.get(foodKey);
     return grams === undefined ? null : grams * quantity;
+  }
+  if ((unitKey === 'pincee' || unitKey === 'pincees') && (foodKey === 'muscade moulue' || foodKey === 'noix de muscade')) {
+    return quantity * 0.3;
   }
   if (waterBasedLiquids.has(foodKey)) {
     if (unitKey === 'ml') return quantity;

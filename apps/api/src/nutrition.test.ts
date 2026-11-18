@@ -40,7 +40,7 @@ test('Nutrition corrections validate manual values and their source', () => {
   assert.equal(nutritionOverrideSchema.safeParse({ grams: -1 }).success, false);
 });
 
-test('Recipe nutrition resolves the main ingredients in cassoulet and lentils with beef', { skip: !process.env.DATABASE_URL }, async () => {
+test('Recipe nutrition resolves the main ingredients in cassoulet, lentils with beef and fish lasagna', { skip: !process.env.DATABASE_URL }, async () => {
   const db = new PrismaClient();
   const ingredients: [string, number | null, string][] = [
     ['Haricots blancs cuits et égouttés', 800, 'g'],
@@ -73,16 +73,35 @@ test('Recipe nutrition resolves the main ingredients in cassoulet and lentils wi
     ['Eau', null, 'ml'],
     ['Poivre', null, ''],
   ];
+  const lasagna: typeof ingredients = [
+    ['Feuilles de lasagnes sèches', 250, 'g'],
+    ['Saumon, sauvage, cru', 350, 'g'],
+    ['Cabillaud, cru', 350, 'g'],
+    ['Épinards surgelés en branches', 500, 'g'],
+    ['Oignon', 1, ''],
+    ["Gousses d'ail", 2, ''],
+    ["Huile d'olive", 10, 'g'],
+    ['Beurre doux', 60, 'g'],
+    ['Farine de blé', 60, 'g'],
+    ['Lait demi-écrémé', 800, 'g'],
+    ['Citron', 1, ''],
+    ['Muscade moulue', 1, 'pincée'],
+    ['Sel', null, ''],
+    ['Poivre', null, ''],
+  ];
   const calculate = (rows: typeof ingredients, portions: number) => recipeNutrition(db, rows.map(([name, quantity, unit]) => ({
     name, quantity: quantity === null ? null : { toNumber: () => quantity }, unit, nutrition: null,
   })), portions);
   try {
     const cassoulet = await calculate(ingredients, 4);
-    assert.deepEqual(cassoulet.missing.map(row => row.name), ["Huile d'olive", 'Thym', 'Feuille de laurier', 'Poivre']);
+    assert.deepEqual(cassoulet.missing.map(row => row.name), ['Thym', 'Feuille de laurier', 'Poivre']);
     assert.deepEqual(Object.values(cassoulet.perPortion).map(value => Math.round(value ?? -1)), [802, 43, 33, 49]);
     const stew = await calculate(lentils, 12);
     assert.deepEqual(stew.missing.map(row => row.name), ['Thym', 'Feuilles de laurier', 'Poivre']);
     assert.deepEqual(Object.values(stew.perPortion).map(value => Math.round(value ?? -1)), [818, 66, 39, 41]);
+    const fishLasagna = await calculate(lasagna, 6);
+    assert.deepEqual(fishLasagna.missing.map(row => row.name), ['Poivre']);
+    assert.deepEqual(Object.values(fishLasagna.perPortion).map(value => value?.toFixed(1)), ["515.9", "36.9", "46.6", "19.1"]);
   } finally {
     await db.$disconnect();
   }
