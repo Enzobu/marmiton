@@ -35,6 +35,10 @@ export function usePlanningData<T>(path: string, token: string) {
   return {
     data: result?.path === path ? result.data : undefined,
     error: result?.path === path && result.error,
+    updateData: (update: (data: T) => T) => setResult(current => {
+      if (current?.path !== path || current.data === undefined) return current;
+      return { ...current, data: update(current.data) };
+    }),
     reload: () => { setResult(undefined); setRevision(value => value + 1); },
   };
 }
