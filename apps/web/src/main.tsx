@@ -10,7 +10,7 @@ import { formatTime, recipePath, type Recipe } from './recipe-data';
 import { RecipeDetail, RecipeCreate, type RecipeSubmission } from './RecipePages';
 import { parseCatalogQuery, serializeCatalogQuery, type CatalogFilters, type CatalogSort } from './recipe-search';
 import { AuthPage, AUTH_ROUTES } from './AuthPages';
-import { AccountPage, type Profile, type AccountRoute } from './AccountPages';
+import { AccountPage, type Profile, type Preferences, type AccountRoute } from './AccountPages';
 import { NotFoundPage, ToastRegion, type ToastMessage } from './UiFeedback';
 import { apiRequest, ApiError, authHeaders, fromApiRecipe, type ApiRecipe, type CatalogPage } from './api';
 import { useAuthenticatedImage } from './useAuthenticatedImage';
@@ -61,6 +61,28 @@ function RecipeCard({ recipe, saved, onToggle, navigate }: { recipe: Recipe; sav
   </article>;
 }
 
+type PreferenceUpdate = { theme?: ThemePreference; developerMode?: boolean };
+
+function patchPreferences(token: string, fields: PreferenceUpdate & { initialize?: boolean }, signal: AbortSignal) {
+  return apiRequest<Preferences>('/me/preferences', {
+    method: 'PATCH',
+    headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+    signal,
+  });
+}
+
+function legacyPreferences(profile: Profile): PreferenceUpdate {
+  const fields: PreferenceUpdate = {};
+  try {
+    const mode = window.localStorage.getItem('petitsplats.developerMode');
+    const theme = window.localStorage.getItem('petitsplats.theme');
+    if (profile.developerMode === null && (mode === 'true' || mode === 'false')) fields.developerMode = mode === 'true';
+    if (profile.theme === null && (theme === 'light' || theme === 'dark' || theme === 'system')) fields.theme = theme;
+  } catch { /* Storage can be blocked. */ }
+  return fields;
+}
+
 function App() {
   const [search, setSearch] = useState(() => parseCatalogQuery(window.location.search).query);
   const [category, setCategory] = useState(() => parseCatalogQuery(window.location.search).category);
@@ -88,11 +110,28 @@ function App() {
   const avatar = useAuthenticatedImage(profile?.avatar, Boolean(profile?.avatar?.startsWith('/me/avatar/')), accessToken);
   const [sessionPending, setSessionPending] = useState(Boolean(accessToken));
   const [sessionError, setSessionError] = useState(false);
+  const [preferenceSaving, setPreferenceSaving] = useState(false);
+  const preferenceRequest = useRef<AbortController | null>(null);
+  const preferencesPending = sessionPending || preferenceSaving;
   useEffect(() => {
     if (!accessToken) return;
     const controller = new AbortController();
     apiRequest<Profile>('/auth/me', { headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal })
-      .then(user => { setProfile(user); setSessionError(false); })
+      .then(async user => {
+        const legacy = legacyPreferences(user);
+        if (Object.keys(legacy).length) {
+          try {
+            user = { ...user, ...await patchPreferences(accessToken, { ...legacy, initialize: true }, controller.signal) };
+          } catch (error) {
+            if (error instanceof ApiError && error.status === 401) throw error;
+            // The saved profile remains usable if the optional import fails.
+          }
+        }
+        if (!controller.signal.aborted) {
+          setProfile(user);
+          setSessionError(false);
+        }
+      })
       .catch(error => {
         if (controller.signal.aborted) return;
         if (error instanceof ApiError && error.status === 401) {
@@ -102,7 +141,12 @@ function App() {
         } else { setSessionError(true); }
       })
       .finally(() => { if (!controller.signal.aborted) setSessionPending(false); });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      preferenceRequest.current?.abort();
+      preferenceRequest.current = null;
+      setPreferenceSaving(false);
+    };
   }, [accessToken]);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -123,10 +167,12 @@ function App() {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [profileOpen]);
-  const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
+  const [guestTheme, setGuestTheme] = useState<ThemePreference>(() => {
     try { const stored = window.localStorage.getItem('petitsplats.theme'); return stored === 'light' || stored === 'dark' ? stored : 'system'; }
     catch { return 'system'; }
   });
+  const themePreference = profile ? profile.theme ?? 'system' : guestTheme;
+  const developerMode = profile?.developerMode ?? false;
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
@@ -141,18 +187,35 @@ function App() {
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
   }, [themePreference]);
+  async function savePreferences(fields: PreferenceUpdate) {
+    if (!accessToken || sessionPending || preferenceRequest.current) return;
+    const controller = new AbortController();
+    preferenceRequest.current = controller;
+    setPreferenceSaving(true);
+    try {
+      const saved = await patchPreferences(accessToken, fields, controller.signal);
+      if (!controller.signal.aborted) setProfile(current => current ? { ...current, ...saved } : current);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 401) invalidateSession();
+      notify('Impossible d’enregistrer les préférences.', 'error');
+    } finally {
+      if (preferenceRequest.current === controller) {
+        preferenceRequest.current = null;
+        setPreferenceSaving(false);
+      }
+    }
+  }
+
   const updateThemePreference = (value: ThemePreference) => {
-    setThemePreference(value);
+    if (profile) {
+      void savePreferences({ theme: value });
+      return;
+    }
+    setGuestTheme(value);
     try { window.localStorage.setItem('petitsplats.theme', value); } catch { /* Storage can be blocked. */ }
   };
-  const [developerMode, setDeveloperMode] = useState(() => {
-    try { return window.localStorage.getItem('petitsplats.developerMode') === 'true'; }
-    catch { return false; }
-  });
-  const toggleDeveloperMode = (enabled: boolean) => {
-    setDeveloperMode(enabled);
-    try { window.localStorage.setItem('petitsplats.developerMode', String(enabled)); } catch { /* Storage unavailable. */ }
-  };
+  const toggleDeveloperMode = (enabled: boolean) => void savePreferences({ developerMode: enabled });
   const [path, setPath] = useState(window.location.pathname);
   const navigate = (next: string) => {
     setProfileOpen(false);
@@ -389,7 +452,7 @@ function App() {
         method: 'PUT', headers: { ...authHeaders(accessToken), 'Content-Type': 'application/json' },
         body: JSON.stringify({ firstName, lastName, bio, photo, newsletter, publicRecipes }),
       });
-      setProfile(updated);
+      setProfile(current => current ? { ...updated, theme: current.theme, developerMode: current.developerMode } : current);
       return updated;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) invalidateSession();
@@ -427,7 +490,7 @@ function App() {
         <nav className="desktop-navigation" aria-label="Navigation principale">
           <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
         </nav>
-        <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{profile ? <div className="profile-menu-wrap" ref={profileMenuRef}>
+        <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference} disabled={preferencesPending}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{profile ? <div className="profile-menu-wrap" ref={profileMenuRef}>
           <button className="profile-trigger" aria-label="Menu du profil" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
             <span className="profile-avatar">{avatar ? <img src={avatar} alt="Photo de profil" style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}}/> : (profile.firstName.charAt(0) + profile.lastName.charAt(0)).toUpperCase()}</span><span>{profile.firstName}</span>
           </button>
@@ -493,12 +556,13 @@ function App() {
       saveSession(token, remember);
       setSessionError(false);
       setProfile(user);
+      setSessionPending(true);
       setAccessToken(token);
       navigate('/');
     }}/>}
     {accountRoute && sessionPending && <p role="status">Vérification de la connexion…</p>}
     {accountRoute && sessionError && <p role="alert">Impossible de vérifier la connexion. Rechargez la page.</p>}
-    {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={favoriteRecipes} token={accessToken} favoritesPending={favoritesPending} favoritesError={favoritesError} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={saveProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} onDeveloperModeChange={toggleDeveloperMode}/>}
+    {accountRoute && profile && <AccountPage key={accountRoute + (profile?.email ?? 'guest')} page={accountRoute} profile={profile} recipes={favoriteRecipes} token={accessToken} favoritesPending={favoritesPending} favoritesError={favoritesError} myRecipes={createdRecipes} favorites={favorites} navigate={navigate} onProfileChange={saveProfile} onFavoriteToggle={toggleFavorite} onDeleteRecipe={deleteCreatedRecipe} developerMode={developerMode} preferencesPending={preferencesPending} onDeveloperModeChange={toggleDeveloperMode}/>}
     {editorialLoading && <p className="section-container" role="status">Chargement de vos recettes…</p>}
     {needsOwnedRecipes && ownedRecipesError && <p className="section-container" role="alert">Impossible de charger vos recettes.</p>}
     {detailLoading && <p className="section-container" role="status">Chargement de la recette…</p>}

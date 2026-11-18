@@ -4,12 +4,14 @@ import { formatTime, recipePath, type Recipe } from './recipe-data';
 import { ConfirmDialog } from './UiFeedback';
 import { useAuthenticatedImage } from './useAuthenticatedImage';
 import { validateRecipeImage } from './recipe-draft';
+import type { ThemePreference } from './ThemeToggle';
 import { ToggleSwitch } from './ToggleSwitch';
 import { AccountPassword } from './AccountPassword';
 import { ImagePicker } from './ImagePicker';
 import './account.css';
 
-export type Profile = { firstName: string; lastName: string; email: string; avatar?: string | null; bio: string; newsletter: boolean; publicRecipes: boolean };
+export type Preferences = { developerMode: boolean | null; theme: ThemePreference | null };
+export type Profile = Preferences & { firstName: string; lastName: string; email: string; avatar?: string | null; bio: string; newsletter: boolean; publicRecipes: boolean };
 export type AccountRoute = 'profile' | 'my-recipes' | 'favorites';
 type Props = {
   page: AccountRoute;
@@ -25,6 +27,7 @@ type Props = {
   onFavoriteToggle: (id: Recipe['id']) => void;
   onDeleteRecipe: (id: Recipe['id']) => void;
   developerMode: boolean;
+  preferencesPending: boolean;
   onDeveloperModeChange: (enabled: boolean) => void;
 };
 
@@ -61,7 +64,7 @@ function AccountRecipeImage({ recipe, token }: { recipe: Recipe; token: string |
   return image ? <img src={image} loading="lazy" alt={recipe.title}/> : null;
 }
 
-export function AccountPage({ page, profile, recipes, favorites, myRecipes, navigate, onProfileChange, onFavoriteToggle, onDeleteRecipe, developerMode, onDeveloperModeChange, token, favoritesPending, favoritesError }: Props) {
+export function AccountPage({ page, profile, recipes, favorites, myRecipes, navigate, onProfileChange, onFavoriteToggle, onDeleteRecipe, developerMode, preferencesPending, onDeveloperModeChange, token, favoritesPending, favoritesError }: Props) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'recent' | 'name' | 'time'>('recent');
   const [firstName, setFirstName] = useState(profile?.firstName ?? '');
@@ -127,7 +130,7 @@ export function AccountPage({ page, profile, recipes, favorites, myRecipes, navi
               {saveError && <p role="alert" className="account-error">{saveError}</p>}
               {photoError && <p role="alert" className="account-error">{photoError}</p>}
               <div className="account-form-grid"><label>Prénom<input required maxLength={70} autoComplete="given-name" value={firstName} onChange={event => setFirstName(event.target.value)}/></label><label>Nom<input required maxLength={70} autoComplete="family-name" value={lastName} onChange={event => setLastName(event.target.value)}/></label><label className="account-field-wide">Adresse e-mail<input type="email" readOnly value={profile.email}/><small>Adresse de connexion et de réinitialisation du mot de passe.</small></label><label className="account-field-wide">Biographie<textarea maxLength={300} rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="Par exemple, vos spécialités culinaires"/></label></div>
-              <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Mode développeur</strong><small>Affiche les outils d'import/export JSON dans l'éditeur de recettes.</small></span><ToggleSwitch label="Mode développeur" checked={developerMode} onChange={onDeveloperModeChange}/></label><label><span><strong>Recevoir les actualités</strong><small>Préférence de réception des actualités.</small></span><ToggleSwitch label="Recevoir les actualités" checked={newsletter} onChange={setNewsletter}/></label><label><span><strong>Recettes publiques</strong><small>Visibilité proposée par défaut pour les nouvelles recettes.</small></span><ToggleSwitch label="Recettes publiques" checked={publicRecipes} onChange={setPublicRecipes}/></label></div>
+              <div className="account-preferences"><h3>Mes préférences</h3><label><span><strong>Mode développeur</strong><small>Affiche les outils d'import/export JSON dans l'éditeur de recettes.</small></span><ToggleSwitch label="Mode développeur" checked={developerMode} disabled={preferencesPending} onChange={onDeveloperModeChange}/></label><label><span><strong>Recevoir les actualités</strong><small>Préférence de réception des actualités.</small></span><ToggleSwitch label="Recevoir les actualités" checked={newsletter} onChange={setNewsletter}/></label><label><span><strong>Recettes publiques</strong><small>Visibilité proposée par défaut pour les nouvelles recettes.</small></span><ToggleSwitch label="Recettes publiques" checked={publicRecipes} onChange={setPublicRecipes}/></label></div>
               {notice && <p role="status" className="account-success">{notice}</p>}
               <div className="account-form-actions"><button className="account-primary" type="submit" disabled={saving}>Enregistrer les modifications</button></div>
             </form>

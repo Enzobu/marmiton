@@ -58,6 +58,12 @@ model RecipeStep {
   @@id([recipeId, position])
 }
 
+enum ThemePreference {
+  light
+  dark
+  system
+}
+
 model Owner {
   id           Int             @id
   email        String          @unique @db.VarChar(254)
@@ -67,6 +73,8 @@ model Owner {
   bio          String          @default("") @db.VarChar(1000)
   newsletter   Boolean         @default(false)
   publicRecipes Boolean        @default(true)
+  developerMode Boolean?
+  theme         ThemePreference?
   avatar       String?         @db.VarChar(255)
   sessions     Session[]
   favorites    Favorite[]

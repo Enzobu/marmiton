@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { profileResponse, profileSelect, requireSession } from './auth.js';
+import { preferencesSelect, profileResponse, profileSelect, requireSession } from './auth.js';
 import { recipeRelations, recipeResponse } from './catalog.js';
 import { imageUploadBodyLimit, maxImageDataUrlLength } from './image-limits.js';
 import { imageNamePattern, imageStore, parseImage } from './images.js';
@@ -12,6 +12,11 @@ const profileSchema = z.object({
   newsletter: z.boolean(), publicRecipes: z.boolean(),
   photo: z.string().max(maxImageDataUrlLength).nullable().optional(),
 }).strict();
+const preferencesSchema = z.object({
+  developerMode: z.boolean().optional(),
+  theme: z.enum(['light', 'dark', 'system']).optional(),
+  initialize: z.boolean().optional(),
+}).strict().refine(({ developerMode, theme }) => developerMode !== undefined || theme !== undefined);
 const uuid = z.string().uuid();
 
 export function registerAccount(app: FastifyInstance, db: PrismaClient, images: ReturnType<typeof imageStore>) {
@@ -40,6 +45,29 @@ export function registerAccount(app: FastifyInstance, db: PrismaClient, images: 
       if (image) await cleanup(newAvatar);
       throw error;
     }
+  });
+
+  app.patch('/me/preferences', async (request, reply) => {
+    const session = await requireSession(request, reply, db);
+    if (!session) return;
+    const parsed = preferencesSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'Invalid preferences' });
+    const { initialize, developerMode, theme } = parsed.data;
+    const where = { id: session.ownerId };
+
+    if (!initialize) {
+      return db.owner.update({ where, data: { developerMode, theme }, select: preferencesSelect });
+    }
+    // Each legacy preference may be adopted once, even if two devices sign in together.
+    return db.$transaction(async tx => {
+      if (developerMode !== undefined) {
+        await tx.owner.updateMany({ where: { ...where, developerMode: null }, data: { developerMode } });
+      }
+      if (theme !== undefined) {
+        await tx.owner.updateMany({ where: { ...where, theme: null }, data: { theme } });
+      }
+      return tx.owner.findUniqueOrThrow({ where, select: preferencesSelect });
+    });
   });
 
   app.get('/me/avatar/:name', async (request, reply) => {

@@ -1,0 +1,28 @@
+meta {
+  name: PATCH /me/preferences (preferences-stale)
+  type: http
+  seq: 16
+}
+
+patch {
+  url: {{baseUrl}}/me/preferences
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "theme": "light",
+    "developerMode": false,
+    "initialize": true
+  }
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Saved preferences", () => { const body = res.getBody(); expect(body.theme).to.equal("dark"); expect(body.developerMode).to.equal(true); });
+}

@@ -1,7 +1,7 @@
 import './theme-quick-access.css';
 
 export type ThemePreference = 'light' | 'system' | 'dark';
-type Props = { value: ThemePreference; onChange: (value: ThemePreference) => void };
+type Props = { value: ThemePreference; disabled?: boolean; onChange: (value: ThemePreference) => void };
 
 function ThemeIcon({ kind }: { kind: ThemePreference }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true as const };
@@ -16,12 +16,13 @@ const themes = {
   dark: { label: 'Sombre', next: 'system' }
 } satisfies Record<ThemePreference, { label: string; next: ThemePreference }>;
 
-export function ThemeToggle({ value, onChange }: Props) {
+export function ThemeToggle({ value, disabled, onChange }: Props) {
   const { label, next } = themes[value];
   const description = `Thème actuel : ${label}. Passer au thème ${themes[next].label}.`;
 
   return <button
     type="button"
+    disabled={disabled}
     className="theme-quick-trigger"
     aria-label={description}
     title={description}

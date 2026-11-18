@@ -1,0 +1,20 @@
+meta {
+  name: GET /auth/me (preferences-current)
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/auth/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Saved preferences", () => { const body = res.getBody(); expect(body.theme).to.equal("dark"); expect(body.developerMode).to.equal(true); });
+}
