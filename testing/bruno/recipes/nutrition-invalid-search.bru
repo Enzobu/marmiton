@@ -1,0 +1,19 @@
+meta {
+  name: GET /nutrition/foods (nutrition-invalid-search)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/nutrition/foods?selected=0
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

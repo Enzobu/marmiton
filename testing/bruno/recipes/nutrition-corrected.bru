@@ -1,0 +1,16 @@
+meta {
+  name: GET /recipes/{{recipeId}} (nutrition-corrected)
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/recipes/{{recipeId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("HTTP 200", () => expect(res.getStatus()).to.equal(200));
+  test("Manual correction persists and produces partial nutrition", () => { expect(res.getBody().quantities[0].nutrition.grams).to.equal(100); expect(res.getBody().nutrition.perPortion).to.deep.equal({kcal:60,protein:5,carbs:7.5,fat:1}); expect(res.getBody().nutrition.missing).to.have.lengthOf(4); });
+}

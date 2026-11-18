@@ -1,4 +1,5 @@
 import { maxImageBytes } from '../../api/src/image-limits.ts';
+import type { NutritionOverride } from '../../api/src/nutrition-types.ts';
 import type { RecipeDifficulty } from './recipe-json';
 
 export type RecipeDraft = {
@@ -13,7 +14,7 @@ export type RecipeDraft = {
   budget: string;
   utensils: string[];
   image: string;
-  items: { id: number; name: string; amount: string; unit: string }[];
+  items: { id: number; name: string; amount: string; unit: string; nutrition?: NutritionOverride }[];
   steps: { id: number; value: string }[];
 };
 
