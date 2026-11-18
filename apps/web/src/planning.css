@@ -46,3 +46,17 @@
 .shopping-recipe-group{margin-top:24px}
 .shopping-recipe-group h2{font-size:20px;line-height:1.35}
 .shopping-recipe-group .planning-list{margin-top:10px}
+
+/* Keep the article in the flow until the API-confirmed removal finishes. */
+.planning-list>li.shopping-item-removing{
+  overflow:hidden;
+  pointer-events:none;
+  animation:shopping-item-remove 240ms ease-in forwards;
+}
+@keyframes shopping-item-remove{
+  0%{opacity:1;transform:translateX(0);max-height:600px}
+  100%{opacity:0;transform:translateX(14px);max-height:0;padding-block:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .planning-list>li.shopping-item-removing{animation:none}
+}
