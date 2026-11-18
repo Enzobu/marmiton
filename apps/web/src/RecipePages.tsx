@@ -29,7 +29,7 @@ function Glyph({ name, size = 20 }: { name: 'back' | 'clock' | 'star' | 'heart' 
     heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>,
     minus: <path d="M5 12h14"/>,
     plus: <path d="M12 5v14M5 12h14"/>,
-    check: <path d="m4 12 5 5L20 6"/>,
+    check: <path pathLength="1" d="m4 12 5 5L20 6"/>,
     people: <><circle cx="9" cy="8" r="3"/><path d="M2 20a7 7 0 0 1 14 0M16 5a3 3 0 0 1 0 6m2 3a6 6 0 0 1 4 6"/></>,
     chef: <><path d="M6 13a4 4 0 0 1-1-7 5 5 0 0 1 9-2 4 4 0 1 1 5 8v7H6Z"/><path d="M6 17h13"/></>,
     wallet: <><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 9h18M16 15h2"/></>,
