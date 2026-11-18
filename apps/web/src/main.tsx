@@ -216,9 +216,22 @@ function App() {
     try { window.localStorage.setItem('petitsplats.theme', value); } catch { /* Storage can be blocked. */ }
   };
   const toggleDeveloperMode = (enabled: boolean) => void savePreferences({ developerMode: enabled });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const mobileMenuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      setMenuOpen(false);
+      mobileMenuButton.current?.focus();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [menuOpen]);
   const [path, setPath] = useState(window.location.pathname);
   const navigate = (next: string) => {
     setProfileOpen(false);
+    setMenuOpen(false);
     if (window.location.pathname !== next) window.history.pushState(null, '', next);
     setPath(next);
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -229,6 +242,7 @@ function App() {
   useEffect(() => {
     const onPop = () => {
       setProfileOpen(false);
+      setMenuOpen(false);
       setPath(window.location.pathname);
       if (window.location.pathname === '/recipes') {
         const parsed = parseCatalogQuery(window.location.search);
@@ -359,7 +373,6 @@ function App() {
       notify('Impossible de supprimer la recette.', 'error');
     }
   };
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
   const [catalogPage, setCatalogPage] = useState(1);
@@ -459,10 +472,10 @@ function App() {
       throw error;
     }
   };
-  const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
-  const openFavorites = () => { setMenuOpen(false); if (!profile) { navigate('/login'); return; } setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); navigate('/favorites'); };
-  const reset = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(false); setMenuOpen(false); navigate('/'); };
-  const browse = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(true); setMenuOpen(false); navigate('/recipes'); };
+  const chooseCategory = (value: string) => { setCategory(value); setOnlyFavorites(false); setShowAll(true); navigate('/recipes'); };
+  const openFavorites = () => { if (!profile) { navigate('/login'); return; } setOnlyFavorites(false); setCategory('Toutes les recettes'); setShowAll(true); navigate('/favorites'); };
+  const reset = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(false); navigate('/'); };
+  const browse = () => { resetAdvancedFilters(); setOnlyFavorites(false); setShowAll(true); navigate('/recipes'); };
   const logout = async () => {
     try {
       if (accessToken) await apiRequest('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
@@ -488,7 +501,7 @@ function App() {
       <div className="header-inner">
         <button className="logo" onClick={reset} aria-label="Accueil Les Petits Plats"><span className="logo-mark"><Icon name="chef" size={25}/></span><span className="logo-wordmark">Les petits<span className="logo-accent">plats.</span></span></button>
         <nav className="desktop-navigation" aria-label="Navigation principale">
-          <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button>
+          <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => navigate("/recipes/new")}>Créer une recette</button>
         </nav>
         <div className="header-actions"><ThemeToggle value={themePreference} onChange={updateThemePreference} disabled={preferencesPending}/><button className="header-favorites" onClick={openFavorites} aria-label="Afficher mes favoris"><Icon name="heart" size={21}/>{favorites.length > 0 && <span className="fav-counter">{favorites.length}</span>}</button>{profile ? <div className="profile-menu-wrap" ref={profileMenuRef}>
           <button className="profile-trigger" aria-label="Menu du profil" aria-expanded={profileOpen} aria-haspopup="true" onClick={() => setProfileOpen(current => !current)}>
@@ -504,9 +517,21 @@ function App() {
             <button onClick={() => navigate('/weekly-menu')}>Menu de la semaine</button>
             <button className="profile-logout" onClick={logout}>Se déconnecter</button>
           </div>}
-        </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}<button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-controls={menuOpen ? "mobile-navigation" : undefined} aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}><Icon name={menuOpen ? 'close' : 'menu'} /></button></div>
+        </div> : <button className="signin-button" onClick={() => navigate('/login')}><Icon name="user" size={17}/>Connexion</button>}
+          <button type="button" ref={mobileMenuButton} className="mobile-menu" onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}><Icon name={menuOpen ? 'close' : 'menu'} />
+          </button>
+        </div>
       </div>
-      {menuOpen && <nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigation mobile"><button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button><button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button><button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button><button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => { setMenuOpen(false); navigate("/recipes/new"); }}>Créer une recette</button></nav>}
+      <div className="mobile-navigation-panel" data-open={menuOpen} inert={!menuOpen}>
+        <div className="mobile-navigation-content">
+          <nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigation mobile">
+            <button className={activeNav === 'home' ? 'nav-active' : ''} aria-current={activeNav === 'home' ? 'page' : undefined} onClick={reset}>Accueil</button>
+            <button className={activeNav === 'recipes' ? 'nav-active' : ''} aria-current={activeNav === 'recipes' ? 'page' : undefined} onClick={browse}>Recettes</button>
+            <button className={activeNav === 'favorites' ? 'nav-active' : ''} aria-current={activeNav === 'favorites' ? 'page' : undefined} onClick={openFavorites}>Mes favoris</button>
+            <button className={activeNav === 'create' ? 'nav-active' : ''} aria-current={activeNav === 'create' ? 'page' : undefined} onClick={() => navigate("/recipes/new")}>Créer une recette</button>
+          </nav>
+        </div>
+      </div>
     </header>
     {(isHome || isCatalog) && <main>
       {isHome && <>
