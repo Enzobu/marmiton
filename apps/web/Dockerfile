@@ -1,4 +1,5 @@
-FROM node:22-alpine AS build
+# Use glibc for the native Rollup parser when bundling React.
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package*.json ./
 COPY apps/api/package.json apps/api/package.json
