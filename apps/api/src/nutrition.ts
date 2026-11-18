@@ -37,7 +37,7 @@ export function summarizeNutrition(rows: { name: string; grams: number | null; m
   const total: Macros = { kcal: null, protein: null, carbs: null, fat: null };
   const missing: NutritionSummary['missing'] = [];
   for (const [position, { name, grams, macros }] of rows.entries()) {
-    if (grams === 0) {
+    if (grams === 0 || (macros && nutrients.every(key => macros[key] === 0))) {
       for (const nutrient of nutrients) total[nutrient] ??= 0;
       continue;
     }

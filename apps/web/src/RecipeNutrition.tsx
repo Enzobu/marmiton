@@ -20,15 +20,16 @@ function NutritionValues({ values, multiplier = 1 }: { values: Macros; multiplie
 
 export function RecipeNutrition({ summary, servings }: { summary: NutritionSummary; servings: number }) {
   const [showTotal, setShowTotal] = useState(false);
+  const partial = summary.missing.length > 0;
   return <section className="nutrition-panel" aria-label="Nutrition de la recette">
     <div className="nutrition-heading">
-      <h2>Nutrition estimée {showTotal ? `pour ${servings} portion${servings > 1 ? 's' : ''}` : 'par portion'}</h2>
+      <h2>{partial ? 'Sous-total nutritionnel estimé' : 'Nutrition estimée'} {showTotal ? `pour ${servings} portion${servings > 1 ? 's' : ''}` : 'par portion'}</h2>
       <button type="button" className="detail-outline-button" onClick={() => setShowTotal(value => !value)}>
         {showTotal ? 'Par portion' : 'Voir le total'}
       </button>
     </div>
     <NutritionValues values={summary.perPortion} multiplier={showTotal ? servings : 1}/>
-    {summary.missing.length > 0 && <details className="nutrition-missing">
+    {partial && <details className="nutrition-missing">
       <summary>Calcul partiel · {summary.missing.length} ingrédient{summary.missing.length > 1 ? 's' : ''} à vérifier</summary>
       <ul>{summary.missing.map(item => <li key={item.position}>{item.name} ({missingLabels[item.reason]})</li>)}</ul>
     </details>}
