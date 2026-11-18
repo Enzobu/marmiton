@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { planningRequest, usePlanningData, type ShoppingItem } from './planning-api';
 import { ConfirmDialog } from './UiFeedback';
 import './planning.css';
@@ -26,33 +26,42 @@ function groupByRecipe(items: ShoppingItem[]) {
 }
 
 export function ShoppingList({ token }: { token: string }) {
-  const { data: items, error: loadError, reload } = usePlanningData<ShoppingItem[]>(path, token);
+  const { data: items, error: loadError, reload, updateData } = usePlanningData<ShoppingItem[]>(path, token);
   const [error, setError] = useState(false);
+  const updating = useRef(false);
   const [busy, setBusy] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [byRecipe, setByRecipe] = useState(false);
 
-  async function update(options: RequestInit, id?: string) {
+  async function update(options: RequestInit, applyUpdate: (items: ShoppingItem[]) => ShoppingItem[], id?: string) {
+    if (updating.current) return;
+    updating.current = true;
     setBusy(true);
     setError(false);
     try {
       await planningRequest(id ? path + '/' + id : path, token, options);
-      reload();
-    } catch { setError(true); }
-    finally { setBusy(false); }
+      updateData(applyUpdate);
+    } catch {
+      setError(true);
+    } finally {
+      updating.current = false;
+      setBusy(false);
+    }
   }
 
   function renderItems(rows: ShoppingItem[], allowRemove: boolean) {
     return <ul className="planning-list">
       {rows.map(item => <li key={item.id}>
         <label className={item.checked ? 'planning-checked' : undefined}>
-          <input type="checkbox" checked={item.checked} disabled={busy} onChange={event => void update({
-            method: 'PATCH', body: JSON.stringify({ checked: event.currentTarget.checked }),
-          }, item.id)}/>
+          <input type="checkbox" checked={item.checked} disabled={busy} onChange={event => {
+            const { checked } = event.currentTarget;
+            void update({ method: 'PATCH', body: JSON.stringify({ checked }) },
+              current => current.map(row => row.id === item.id ? { ...row, checked } : row), item.id);
+          }}/>
           <span>{item.name}{item.amount !== null && <small>{quantityFormat.format(item.amount)} {item.unit}</small>}</span>
         </label>
         {allowRemove && <button type="button" className="detail-outline-button" disabled={busy}
-          aria-label={'Retirer ' + item.name} onClick={() => void update({ method: 'DELETE' }, item.id)}>Retirer</button>}
+          aria-label={'Retirer ' + item.name} onClick={() => void update({ method: 'DELETE' }, current => current.filter(row => row.id !== item.id), item.id)}>Retirer</button>}
       </li>)}
     </ul>;
   }
@@ -69,7 +78,7 @@ export function ShoppingList({ token }: { token: string }) {
       {!!items?.length && <button type="button" className="detail-outline-button shopping-clear" disabled={busy}
         onClick={() => setConfirmClear(true)}>Vider la liste</button>}
     </div>
-    {error && <p role="alert">Impossible de modifier la liste. <button onClick={() => { setError(false); reload(); }}>Actualiser</button></p>}
+    {error && <p role="alert">Impossible de modifier la liste. <button type="button" onClick={() => { setError(false); reload(); }}>Actualiser</button></p>}
     {loadError && <p role="alert">Impossible de charger la liste. <button onClick={reload}>Réessayer</button></p>}
     {!items && !loadError && <p role="status">Chargement de la liste…</p>}
     {items && (items.length === 0 ? <p>Votre liste est vide.</p> : <>
@@ -86,7 +95,7 @@ export function ShoppingList({ token }: { token: string }) {
       description="Tous les articles seront supprimés, cochés ou non."
       confirmLabel="Vider la liste" destructive onCancel={() => setConfirmClear(false)} onConfirm={() => {
         setConfirmClear(false);
-        void update({ method: 'DELETE' });
+        void update({ method: 'DELETE' }, () => []);
       }}/>}
   </main>;
 }
