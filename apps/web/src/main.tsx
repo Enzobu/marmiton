@@ -594,7 +594,7 @@ function App() {
     {currentDetail?.error && <p className="section-container" role="alert">Impossible de charger la recette.</p>}
     {isNotFound && <NotFoundPage navigate={navigate}/>}
     <ToastRegion toast={toast} onDismiss={() => setToast(null)}/>
-    <footer className="site-footer"><div><span className="footer-brand">Les petits<span>plats.</span></span><p>Carnet de recettes maison.</p></div><span>Recettes, ingrédients et préparation</span></footer>
+    <footer className={isShoppingList ? "site-footer shopping-footer" : "site-footer"}><div><span className="footer-brand">Les petits<span>plats.</span></span><p>Carnet de recettes maison.</p></div><span>Recettes, ingrédients et préparation</span></footer>
 
   </>;
 }
