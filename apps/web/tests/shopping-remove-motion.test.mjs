@@ -18,3 +18,10 @@ test('Shopping removal supports motion preferences', () => {
   assert.match(styles, /@keyframes shopping-item-remove/);
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/);
 });
+
+test('Remove action is available in all-items and by-recipe views', () => {
+  assert.match(component, /function renderItems\(rows: ShoppingItem\[\]\)/);
+  assert.match(component, /groupByRecipe\(items\)[\s\S]*?renderItems\(rows\)/);
+  assert.match(component, /: renderItems\(items\)/);
+  assert.doesNotMatch(component, /allowRemove/);
+});
