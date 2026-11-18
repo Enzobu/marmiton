@@ -32,26 +32,33 @@ export function ShoppingList({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [byRecipe, setByRecipe] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
-  async function update(options: RequestInit, applyUpdate: (items: ShoppingItem[]) => ShoppingItem[], id?: string) {
+  async function update(options: RequestInit, applyUpdate: (items: ShoppingItem[]) => ShoppingItem[], id?: string, animateRemoval = false) {
     if (updating.current) return;
     updating.current = true;
     setBusy(true);
     setError(false);
     try {
       await planningRequest(id ? path + '/' + id : path, token, options);
+      if (animateRemoval && id) {
+        setRemovingId(id);
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reducedMotion) await new Promise<void>(resolve => window.setTimeout(resolve, 240));
+      }
       updateData(applyUpdate);
     } catch {
       setError(true);
     } finally {
       updating.current = false;
+      setRemovingId(null);
       setBusy(false);
     }
   }
 
   function renderItems(rows: ShoppingItem[], allowRemove: boolean) {
     return <ul className="planning-list">
-      {rows.map(item => <li key={item.id}>
+      {rows.map(item => <li key={item.id} className={removingId === item.id ? 'shopping-item-removing' : undefined}>
         <label className={item.checked ? 'planning-checked' : undefined}>
           <input type="checkbox" checked={item.checked} disabled={busy} onChange={event => {
             const { checked } = event.currentTarget;
@@ -61,7 +68,7 @@ export function ShoppingList({ token }: { token: string }) {
           <span>{item.name}{item.amount !== null && <small>{quantityFormat.format(item.amount)} {item.unit}</small>}</span>
         </label>
         {allowRemove && <button type="button" className="detail-outline-button" disabled={busy}
-          aria-label={'Retirer ' + item.name} onClick={() => void update({ method: 'DELETE' }, current => current.filter(row => row.id !== item.id), item.id)}>Retirer</button>}
+          aria-label={'Retirer ' + item.name} onClick={() => void update({ method: 'DELETE' }, current => current.filter(row => row.id !== item.id), item.id, true)}>Retirer</button>}
       </li>)}
     </ul>;
   }
