@@ -1,0 +1,26 @@
+meta {
+  name: PATCH /me/preferences (preferences-invalid)
+  type: http
+  seq: 14
+}
+
+patch {
+  url: {{baseUrl}}/me/preferences
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{accessToken}}
+}
+
+body:json {
+  {
+    "theme": "sepia",
+    "developerMode": "true"
+  }
+}
+
+tests {
+  test("HTTP 400", () => expect(res.getStatus()).to.equal(400));
+}

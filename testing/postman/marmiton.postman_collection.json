@@ -1292,6 +1292,190 @@
           ]
         },
         {
+          "name": "PATCH /me/preferences (preferences-guest)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"dark\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-invalid)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"sepia\", \"developerMode\": \"true\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"dark\", \"developerMode\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"dark\"); pm.expect(body.developerMode).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-stale)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"light\", \"developerMode\": false, \"initialize\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"dark\"); pm.expect(body.developerMode).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me (preferences-current)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"dark\"); pm.expect(body.developerMode).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me/preferences (preferences-default)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/me/preferences",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"theme\": \"system\", \"developerMode\": false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Saved preferences\", () => { const body = pm.response.json(); pm.expect(body.theme).to.eql(\"system\"); pm.expect(body.developerMode).to.eql(false); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /auth/logout (logout)",
           "request": {
             "method": "POST",

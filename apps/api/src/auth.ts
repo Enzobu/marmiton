@@ -9,7 +9,8 @@ const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128), remember: z.boolean().optional() }).strict();
 const resetRequestSchema = z.object({ theme: z.enum(['light', 'dark']).default('light') });
 const resetSchema = z.object({ token: tokenSchema, password: passwordSchema }).strict();
-export const profileSelect = { email: true, firstName: true, lastName: true, bio: true, newsletter: true, publicRecipes: true, avatar: true } as const;
+export const preferencesSelect = { theme: true, developerMode: true } as const;
+export const profileSelect = { ...preferencesSelect, email: true, firstName: true, lastName: true, bio: true, newsletter: true, publicRecipes: true, avatar: true } as const;
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const newToken = () => randomBytes(32).toString('base64url');
 
