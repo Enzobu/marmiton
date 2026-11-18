@@ -56,7 +56,7 @@ export function ShoppingList({ token }: { token: string }) {
     }
   }
 
-  function renderItems(rows: ShoppingItem[], allowRemove: boolean) {
+  function renderItems(rows: ShoppingItem[]) {
     return <ul className="planning-list">
       {rows.map(item => <li key={item.id} className={removingId === item.id ? 'shopping-item-removing' : undefined}>
         <label className={item.checked ? 'planning-checked' : undefined}>
@@ -67,7 +67,7 @@ export function ShoppingList({ token }: { token: string }) {
           }}/>
           <span>{item.name}{item.amount !== null && <small>{quantityFormat.format(item.amount)} {item.unit}</small>}</span>
         </label>
-        {allowRemove && <button type="button" className="detail-outline-button" disabled={busy}
+        {<button type="button" className="detail-outline-button" disabled={busy}
           aria-label={'Retirer ' + item.name} onClick={() => void update({ method: 'DELETE' }, current => current.filter(row => row.id !== item.id), item.id, true)}>Retirer</button>}
       </li>)}
     </ul>;
@@ -95,8 +95,8 @@ export function ShoppingList({ token }: { token: string }) {
       </div>
       {byRecipe ? groupByRecipe(items).map(({ id, title, rows }) => <section className="shopping-recipe-group" key={id ?? 'unassigned'}>
         <h2>{title}</h2>
-        {renderItems(rows, false)}
-      </section>) : renderItems(items, true)}
+        {renderItems(rows)}
+      </section>) : renderItems(items)}
     </>)}
     {confirmClear && <ConfirmDialog title="Vider la liste de courses ?"
       description="Tous les articles seront supprimés, cochés ou non."
