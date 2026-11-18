@@ -15,7 +15,7 @@ test('Profile menu closes for outside pointer and Escape, and cleans up listener
   assert.match(main, /document\.removeEventListener\('pointerdown', handleOutsidePointer\)/);
   assert.match(main, /event\.key === 'Escape'/);
   assert.match(main, /document\.removeEventListener\('keydown', handleEscape\)/);
-  assert.match(main, /setProfileOpen\(false\);\s*setPath\(window\.location\.pathname\)/);
+  assert.match(main, /setProfileOpen\(false\);\s*setMenuOpen\(false\);\s*setPath\(window\.location\.pathname\)/);
 });
 
 test('Main navigation highlights the active route in desktop and mobile menus', () => {
