@@ -322,7 +322,7 @@ function App() {
     return () => controller.abort();
   }, [accessToken, signedIn, recipeRevision]);
   const favorites = favoriteRecipes.map(recipe => recipe.id);
-  const [detail, setDetail] = useState<{ id: string; recipe?: Recipe; error?: boolean }>();
+  const [detail, setDetail] = useState<{ id: string; revision: number; recipe?: Recipe; error?: boolean }>();
   const query = new URLSearchParams(serializeCatalogQuery(catalogFilters));
   query.set('limit', isHome && !showAll ? '6' : '24');
   const filterKey = query.toString();
@@ -339,21 +339,23 @@ function App() {
   }, [catalogKey, isHome, isCatalog, recipeRevision]);
   const localRecipe = detailId && profile ? createdRecipes.find(recipe => String(recipe.id) === detailId) : undefined;
   useEffect(() => {
-    if (!detailId || localRecipe || !detailId.includes('-')) return;
+    if (!detailId || !detailId.includes('-')) return;
     const controller = new AbortController();
     apiRequest<ApiRecipe>(`/recipes/${detailId}`, { headers: authHeaders(accessToken), signal: controller.signal })
-      .then(recipe => setDetail({ id: detailId, recipe: fromApiRecipe(recipe) }))
+      .then(recipe => {
+        if (!controller.signal.aborted) setDetail({ id: detailId, revision: recipeRevision, recipe: fromApiRecipe(recipe) });
+      })
       .catch(error => {
         if (!controller.signal.aborted) {
           if (error instanceof ApiError && error.status === 401) invalidateSession();
-          setDetail({ id: detailId, error: !(error instanceof ApiError && [400, 401, 404].includes(error.status)) });
+          setDetail({ id: detailId, revision: recipeRevision, error: !(error instanceof ApiError && [400, 401, 404].includes(error.status)) });
         }
       });
     return () => controller.abort();
-  }, [detailId, localRecipe, accessToken, recipeRevision]);
+  }, [detailId, accessToken, recipeRevision]);
   const currentCatalog = catalog?.key === catalogKey ? catalog : undefined;
-  const currentDetail = detail?.id === detailId ? detail : undefined;
-  const selectedRecipe = localRecipe ?? currentDetail?.recipe;
+  const currentDetail = detail?.id === detailId && detail?.revision === recipeRevision ? detail : undefined;
+  const selectedRecipe = currentDetail?.recipe ?? localRecipe;
   const detailLoading = Boolean(detailId?.includes('-') && !localRecipe && !currentDetail);
   const editorialLoading = needsOwnedRecipes && (!!accessToken && (ownedRecipesPending || (ownedRecipesLoaded !== accessToken && !ownedRecipesError)));
   const isNotFound = !isHome && !isCatalog && !isCreate && !isShoppingList && !isWeeklyMenu && !isPantrySearch && !selectedRecipe && !authPage && !accountRoute && !editRecipe && !detailLoading && !currentDetail?.error && !(editId && (editorialLoading || ownedRecipesError || !profile));

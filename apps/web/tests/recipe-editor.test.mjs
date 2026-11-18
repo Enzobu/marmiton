@@ -30,3 +30,10 @@ test('The editor sends metadata through the recipe write API', () => {
   assert.match(editor, /times: \{ preparation: prep, cooking: cook, rest \}/);
   assert.match(app, /body: JSON.stringify\(submission\)/);
 });
+
+test('Recipe detail loads nutrition even when the owner list already has the recipe', () => {
+  assert.match(app, /if \(!detailId \|\| !detailId\.includes\('-'\)\) return/);
+  assert.match(app, /apiRequest<ApiRecipe>\(`\/recipes\/\$\{detailId\}`/);
+  assert.match(app, /const selectedRecipe = currentDetail\?\.recipe \?\? localRecipe/);
+  assert.match(app, /detail\?\.revision === recipeRevision/);
+});
