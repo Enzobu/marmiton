@@ -16,7 +16,12 @@ const pieceWeights = new Map([
   ['gousse d ail', 3], ['gousses d ail', 3], ['tete d ail', 30], ['tetes d ail', 30],
   ['cube de bouillon de boeuf', 10], ['cubes de bouillon de boeuf', 10],
 ]);
-const waterBasedLiquids = new Set(['eau', 'eau du robinet', 'bouillon de volaille', 'bouillon de boeuf']);
+const volumeUnits = new Map([['ml', 1], ['cl', 10], ['l', 1000]]);
+const liquidDensities = new Map([
+  ['eau', 1], ['eau du robinet', 1], ['bouillon de volaille', 1], ['bouillon de boeuf', 1],
+  ['lait demi ecreme', 1.03], ['lait demi ecreme uht', 1.03], ['lait demi ecreme pasteurise', 1.03],
+]);
+const bakingPowderNames = new Set(['levure chimique', 'poudre a lever', 'levure chimique ou poudre a lever']);
 
 export function ingredientWeight(name: string, quantity: number | null, unit: string | null, override?: number) {
   if (override !== undefined) return override;
@@ -33,10 +38,10 @@ export function ingredientWeight(name: string, quantity: number | null, unit: st
   if ((unitKey === 'pincee' || unitKey === 'pincees') && (foodKey === 'muscade moulue' || foodKey === 'noix de muscade')) {
     return quantity * 0.3;
   }
-  if (waterBasedLiquids.has(foodKey)) {
-    if (unitKey === 'ml') return quantity;
-    if (unitKey === 'cl') return quantity * 10;
-    if (unitKey === 'l') return quantity * 1000;
+  if (['sachet', 'sachets', 'sachet s'].includes(unitKey) && bakingPowderNames.has(foodKey)) {
+    return quantity * 11;
   }
-  return null;
+  const mlPerUnit = volumeUnits.get(unitKey);
+  const gramsPerMl = liquidDensities.get(foodKey);
+  return mlPerUnit === undefined || gramsPerMl === undefined ? null : quantity * mlPerUnit * gramsPerMl;
 }
