@@ -17,6 +17,13 @@ test('Nutrition converts mass units, estimates edible egg weight and allows a we
   assert.equal(ingredientWeight("Gousses d’ail", 3, ''), 9);
   assert.equal(ingredientWeight('Carotte', 1, ''), 70);
   assert.equal(ingredientWeight('Bouillon de volaille', 400, 'ml'), 400);
+  assert.equal(ingredientWeight('Lait demi-écrémé', 200, 'mL'), 206);
+  assert.equal(ingredientWeight('Lait demi-écrémé UHT', 20, 'cL'), 206);
+  assert.equal(ingredientWeight('Lait demi-écrémé', 1, 'L'), 1030);
+  assert.equal(ingredientWeight('Lait demi-écrémé', 200, 'g'), 200);
+  assert.equal(ingredientWeight('Lait demi-écrémé', 200, 'ml', 210), 210);
+  assert.equal(ingredientWeight('Levure chimique', 0.5, 'sachet'), 5.5);
+  assert.equal(ingredientWeight('Levure de boulanger', 1, 'sachet'), null);
 });
 
 test('Nutrition calculates per portion and reports unknown foods, weights and nutrient values', () => {
@@ -102,6 +109,29 @@ test('Recipe nutrition resolves the main ingredients in cassoulet, lentils with 
     const fishLasagna = await calculate(lasagna, 6);
     assert.deepEqual(fishLasagna.missing.map(row => row.name), ['Poivre']);
     assert.deepEqual(Object.values(fishLasagna.perPortion).map(value => value?.toFixed(1)), ["515.9", "36.9", "46.6", "19.1"]);
+  } finally {
+    await db.$disconnect();
+  }
+});
+
+test('Recipe nutrition estimates macros for banana whey, plain skyr, milk and baking powder', { skip: !process.env.DATABASE_URL }, async () => {
+  const db = new PrismaClient();
+  const ingredients = [
+    { name: 'Whey banane', quantity: { toNumber: () => 30 }, unit: 'g', nutrition: null },
+    { name: 'Skyr nature', quantity: { toNumber: () => 100 }, unit: 'g', nutrition: null },
+    { name: 'Lait demi-écrémé', quantity: { toNumber: () => 200 }, unit: 'ml', nutrition: null },
+    { name: 'Levure chimique', quantity: { toNumber: () => 0.5 }, unit: 'sachet', nutrition: null },
+  ];
+  try {
+    const summary = await recipeNutrition(db, ingredients, 2);
+    assert.deepEqual(summary.missing, []);
+    assert.deepEqual(Object.values(summary.total).map(value => value?.toFixed(2)), ['276.50', '39.47', '17.12', '5.32']);
+    assert.equal(summary.perPortion.kcal?.toFixed(2), '138.25');
+
+    const manualWhey = { ...ingredients[0], nutrition: { per100g: { kcal: 400, protein: 80, carbs: 5, fat: 6 } } };
+    const corrected = await recipeNutrition(db, [manualWhey, ...ingredients.slice(1)], 2);
+    assert.deepEqual(corrected.missing, []);
+    assert.equal(corrected.total.protein?.toFixed(2), '40.97');
   } finally {
     await db.$disconnect();
   }

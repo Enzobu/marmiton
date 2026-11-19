@@ -647,7 +647,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon march\\u00e9\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}], \"utensils\": [\"Bol\"], \"steps\": [\"M\\u00e9langer.\"], \"imageUrl\": null}, \"isPublic\": true, \"photo\": \"{{limitPhoto}}\"}"
+              "raw": "{\"recipe\": {\"schemaVersion\": 1, \"title\": \"Recette HTTP temporaire\", \"description\": \"Fixture HTTP\", \"category\": \"Plats\", \"difficulty\": \"Facile\", \"servings\": 2, \"times\": {\"preparation\": 5, \"cooking\": 10, \"rest\": 0}, \"budget\": \"Bon marché\", \"ingredients\": [{\"name\": \"Farine\", \"quantity\": 25, \"unit\": \"g\"}, {\"name\": \"Whey banane\", \"quantity\": 30, \"unit\": \"g\"}, {\"name\": \"Skyr nature\", \"quantity\": 100, \"unit\": \"g\"}, {\"name\": \"Lait demi-écrémé\", \"quantity\": 200, \"unit\": \"ml\"}, {\"name\": \"Levure chimique\", \"quantity\": 0.5, \"unit\": \"sachet\"}], \"utensils\": [\"Bol\"], \"steps\": [\"Mélanger.\"], \"imageUrl\": null}, \"isPublic\": true, \"photo\": \"{{limitPhoto}}\"}"
             }
           },
           "event": [
@@ -764,7 +764,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.test(\"Imported recipe uses Ciqual\", () => { pm.expect(pm.response.json().nutrition.total.kcal).to.be.greaterThan(0); pm.expect(pm.response.json().nutrition.perPortion.kcal).to.equal(pm.response.json().nutrition.total.kcal / 2); pm.expect(pm.response.json().nutrition.source).to.include(\"Ciqual 2025\"); });"
+                  "pm.test(\"Imported recipe includes protein ingredients\", () => { pm.expect(pm.response.json().nutrition.missing).to.deep.equal([]); pm.expect(pm.response.json().nutrition.total.protein).to.be.greaterThan(39); pm.expect(pm.response.json().nutrition.perPortion.kcal).to.equal(pm.response.json().nutrition.total.kcal / 2); pm.expect(pm.response.json().nutrition.source).to.include(\"Ciqual 2025\"); });"
                 ]
               }
             }
