@@ -107,7 +107,7 @@ function NutritionControls({ name, amount, unit, value, token, onChange }: Edito
       </label>
       <SelectField className="form-field" label="Source nutritionnelle" value={manual ? 'manual' : 'ciqual'}
         onChange={mode => setManual(mode === 'manual')}
-        options={[{ value: 'ciqual', label: 'Table Ciqual' }, { value: 'manual', label: 'Étiquette du produit' }]}/>
+        options={[{ value: 'ciqual', label: 'Référentiel nutritionnel' }, { value: 'manual', label: 'Étiquette du produit' }]}/>
     </div>
     {manual ? <div>
       <div className="nutrition-control-grid">
@@ -123,12 +123,12 @@ function NutritionControls({ name, amount, unit, value, token, onChange }: Edito
         {hasCustom && <span role="status">Valeurs de l’étiquette appliquées</span>}
       </div>
     </div> : <div className="nutrition-food-search">
-      <label className="form-field">Rechercher dans Ciqual
+      <label className="form-field">Rechercher un aliment de référence
         <input type="search" value={query} maxLength={160} onChange={event => setQuery(event.target.value)}/>
       </label>
       {hasCustom && <p>Valeurs de l’étiquette actives. Choisis un aliment pour les remplacer.</p>}
       {!hasCustom && matches?.match && <p>{selectedCode ? 'Sélection' : 'Association automatique'} : {matches.match.name}</p>}
-      {searchError && <p role="alert">La recherche Ciqual est indisponible.</p>}
+      {searchError && <p role="alert">La recherche d’aliments est indisponible.</p>}
       {!searchError && query.trim() && matches && matches.results.length === 0 && <p>Aucun aliment trouvé. Essaie un nom plus court.</p>}
       {matches?.results.length ? <ul className="nutrition-results">
         {matches.results.map(food => <li key={food.code}><button type="button" aria-pressed={selectedCode === food.code}

@@ -19,7 +19,7 @@ export const nutritionOverrideSchema = z.object({
   remember: z.boolean().optional(),
 }).strict().refine(value => !(value.foodCode && value.per100g) && (!value.remember || !!value.foodCode));
 
-const source = 'Ciqual 2025 — Anses';
+const source = 'Ciqual 2025 — Anses et références fabricant';
 type NutritionDb = Pick<PrismaClient, 'nutritionAlias' | 'nutritionFood'>;
 type Food = Macros & { code: number };
 type Ingredient = {
